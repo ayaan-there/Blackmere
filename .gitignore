@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.py[cod]
+data/cache/
+data/raw/
+logs/
+*.parquet
+*.tmp
+.DS_Store

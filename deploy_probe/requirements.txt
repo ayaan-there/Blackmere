@@ -1,0 +1,2 @@
+smartapi-python>=1.6
+pyotp>=2.9
