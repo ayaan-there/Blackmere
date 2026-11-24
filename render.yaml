@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: blackmere
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web/main.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: ANGEL_API_KEY
+        sync: false
+      - key: ANGEL_CLIENT_ID
+        sync: false
+      - key: ANGEL_PASSWORD
+        sync: false
+      - key: ANGEL_TOTP_SECRET
+        sync: false
+      - key: ANGEL_REFRESH_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
