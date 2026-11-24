@@ -96,7 +96,7 @@ function initChart(){
   const c=chartTheme();
   tvChart=LightweightCharts.createChart($('heroChart'),{
     layout:{background:{type:LightweightCharts.ColorType.Solid,color:c.bg},textColor:c.text,
-            fontFamily:'JetBrains Mono, monospace',fontSize:11,attributionLogo:false},
+            fontFamily:'JetBrains Mono, monospace',fontSize:12,attributionLogo:false},
     grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}},
     rightPriceScale:{borderVisible:false,scaleMargins:{top:.08,bottom:.08}},
     timeScale:{borderVisible:false,timeVisible:true,secondsVisible:false,rightOffset:2},
