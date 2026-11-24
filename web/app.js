@@ -32,10 +32,8 @@ async function load(tf){
     else if (bage > 600) setStatus('● DELAYED', 'err');
     else if (live) setStatus('● LIVE', '');
     else setStatus('● NO DATA', 'rec');
-    $('heroSource').textContent = data.source;
   }catch(e){
     setStatus('● OFFLINE','err');
-    $('heroSource').textContent = 'DATA UNAVAILABLE';
     $('flowLog').innerHTML = `<div class="errbox">Live data unavailable — ${esc(e.message)}. Retrying automatically…</div>`;
   }finally{ loading = false; }
 }
@@ -81,7 +79,7 @@ function seriesChart(svg, series, opts){
   el.innerHTML=s;
 }
 /* ---------- TradingView-style candlestick hero (candles only) ---------- */
-let tvChart=null, candleSeries=null, vwapSeries=null, liveBar=null, lastTickAt=0;
+let tvChart=null, candleSeries=null, liveBar=null, lastTickAt=0;
 const barCache={};
 function chartTheme(){
   const dark=document.documentElement.getAttribute('data-theme')!=='light';
@@ -111,16 +109,13 @@ function initChart(){
   });
   candleSeries=tvChart.addCandlestickSeries({upColor:c.up,downColor:c.down,borderVisible:false,
     wickUpColor:c.up,wickDownColor:c.down,priceLineVisible:false,lastValueVisible:true});
-  vwapSeries=tvChart.addLineSeries({color:c.teal,lineWidth:2,
-    lineStyle:LightweightCharts.LineStyle.Dotted,priceLineVisible:false,
-    lastValueVisible:false,crosshairMarkerVisible:false});
   const box=document.createElement('div'); box.className='tv-tip'; $('heroChart').appendChild(box);
   tvChart.subscribeCrosshairMove(p=>{
     if(!p.point || !p.seriesData){box.style.display='none';return;}
-    const b=p.seriesData.get(candleSeries), v=p.seriesData.get(vwapSeries);
+    const b=p.seriesData.get(candleSeries);
     if(!b){box.style.display='none';return;}
     box.innerHTML=`<b>${fmtTime(p.time)}</b><br>O ${f2(b.open)} &nbsp; H ${f2(b.high)}`
-      +`<br>L ${f2(b.low)} &nbsp; C ${f2(b.close)}`+(v?`<br>VWAP ${f2(v)}`:'');
+      +`<br>L ${f2(b.low)} &nbsp; C ${f2(b.close)}`;
     box.style.display='block';
     box.style.left=Math.max(4,Math.min(p.point.x+12,$('heroChart').clientWidth-130))+'px';
     box.style.top=Math.max(4,p.point.y-64)+'px';
@@ -134,15 +129,14 @@ async function loadBars(tf){
     catch(_){barCache[tf]=[];}
   }
   const rows=barCache[tf]||[];
-  if(!rows.length){candleSeries.setData([]);vwapSeries.setData([]);return;}
-  const data=[],vw=[];let cum=0,n=0;
+  if(!rows.length){candleSeries.setData([]);return;}
+  const data=[];
   for(const r of rows){
     const t=chartTime(r.ts),o=+r.o,h=+r.h,l=+r.l,c=+r.c;
     if(t==null||!isFinite(o)||!isFinite(h)||!isFinite(l)||!isFinite(c))continue;
     data.push({time:t,open:o,high:h,low:l,close:c});
-    cum+=(h+l+c)/3; n++; vw.push({time:t,value:cum/n});
   }
-  candleSeries.setData(data); vwapSeries.setData(vw);
+  candleSeries.setData(data);
   tvChart.timeScale().fitContent();
 }
 function renderHero(){
@@ -303,9 +297,6 @@ function renderAll(){
 function setTimeframe(m){
   currentMin=m;
   document.querySelectorAll('.dock-btn[data-min]').forEach(b=>b.classList.toggle('active',+b.dataset.min===m));
-  const lab=m===1?'1S':`${m}M`;
-  $('refreshLabel').textContent=`${lab} CANDLES`;
-  $('heroPill').textContent=lab;
   load(m);
   if(pollTimer) clearInterval(pollTimer);
   pollTimer=setInterval(()=>load(currentMin),60000);
@@ -323,7 +314,7 @@ function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   $('themeBtn').textContent=t==='light'?'☀':'☾';
   try{localStorage.setItem('nifty-theme',t);}catch(e){}
-  if(tvChart){tvChart.remove();tvChart=null;candleSeries=null;vwapSeries=null;liveBar=null;loadBars(currentMin);}
+  if(tvChart){tvChart.remove();tvChart=null;candleSeries=null;liveBar=null;loadBars(currentMin);}
   if(snap) renderAll();
 }
 $('themeBtn').addEventListener('click',()=>{
