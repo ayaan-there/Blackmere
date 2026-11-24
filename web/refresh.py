@@ -45,7 +45,7 @@ def _oi_loop():
     global _last_oi
     while True:
         now = time.time()
-        if core.market_open() and now - _last_oi >= 30:
+        if core.market_open() and not core.PREVIEW_DAY and now - _last_oi >= 30:
             _last_oi = now
             try:
                 spot = core.live_spot()
@@ -65,7 +65,7 @@ def _oi_loop():
 
 def _rows_loop():
     while True:
-        if core.market_open():
+        if core.market_open() and not core.PREVIEW_DAY:
             try:
                 samples = core.oi_samples()
                 fut = data_loader.fetch_futures_ltp()

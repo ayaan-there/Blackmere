@@ -72,7 +72,8 @@ def _series(observations: list) -> list:
 
 def _strength(series: list) -> dict:
     if len(series) < 5:
-        return {"score": None, "trend": "insufficient", "z_price": None, "z_oi": None}
+        return {"score": None, "trend": "insufficient", "z_price": None, "z_oi": None,
+                "persistence": None, "consistency": None}
     window = series[-config.STRENGTH_LOOKBACK:]
     pp = [x["price_change_pct"] for x in window]
     op = [x["oi_change_pct"] for x in window]

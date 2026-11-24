@@ -173,3 +173,15 @@ button{font:inherit;color:inherit}
 .tabs-mini .tab.active{background:var(--subtle);border-color:var(--border);color:var(--text)}
 .tabbody{flex:1 1 auto;min-height:0;overflow-y:auto}
 
+
+#flowLog{flex:0 0 198px}
+#flowLog table{font-size:8px}
+#flowLog th,#flowLog td{padding:1px 2px;height:20px}
+
+
+#flowLog table{font-size:7px}
+#flowLog th,#flowLog td{padding:1px 1px}
+
+
+#flowLog table{letter-spacing:-.03em}
+

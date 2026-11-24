@@ -6,6 +6,7 @@ data and never synthetic data.
 """
 from __future__ import annotations
 
+import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -24,11 +25,16 @@ _cache: dict[str, tuple[float, object]] = {}
 _locks = {k: threading.Lock() for k in ("spot", "oi", "nse")}
 
 
+PREVIEW_DAY = os.getenv("BLACKMERE_PREVIEW_DAY", "")
+
+
 def today_str() -> str:
-    return datetime.now(IST).strftime("%Y-%m-%d")
+    return PREVIEW_DAY or datetime.now(IST).strftime("%Y-%m-%d")
 
 
 def market_open() -> bool:
+    if PREVIEW_DAY:
+        return True
     now = datetime.now(IST)
     if now.weekday() >= 5:
         return False
@@ -111,16 +117,23 @@ def _num(v):
 def snapshot(tf: int) -> dict:
     """Payload compatible with the current UI, but today-only and honest."""
     rows = today_rows(tf)
-    hero = [{"t": b.get("t"), "o": _num(b.get("o")), "h": _num(b.get("h")),
-             "l": _num(b.get("l")), "c": _num(b.get("c"))}
-            for b in today_bars(3)]
-    nse = get_live() or {}
-    spot = live_spot()
-    spot_ok = bool(spot) and market_open() and bool(rows)
-    source = "TODAY · LIVE" if spot_ok else "NO DATA"
-
+    if PREVIEW_DAY:
+        stored = STORE.fetch("price_bars", filters={"day": today_str(), "tf": "3"},
+                             order="ts.asc")
+        hero = [{"t": str(b.get("ts", ""))[11:16], "o": _num(b.get("o")),
+                 "h": _num(b.get("h")), "l": _num(b.get("l")), "c": _num(b.get("c"))}
+                for b in stored]
+    else:
+        hero = [{"t": b.get("t"), "o": _num(b.get("o")), "h": _num(b.get("h")),
+                 "l": _num(b.get("l")), "c": _num(b.get("c"))}
+                for b in today_bars(3)]
     last = rows[-1] if rows else {}
-    oi_chain = angel_oi()
+    nse = get_live() or {}
+    spot = live_spot() if not PREVIEW_DAY else (float(last["close"]) if rows else None)
+    spot_ok = bool(spot) and market_open() and bool(rows)
+    source = ("PREVIEW · " + PREVIEW_DAY) if PREVIEW_DAY else ("TODAY · LIVE" if spot_ok else "NO DATA")
+
+    oi_chain = angel_oi() if not PREVIEW_DAY else None
     if oi_chain is not None and not oi_chain.empty and rows:
         call = float(oi_chain[oi_chain.side == "CE"].oi.sum())
         put = float(oi_chain[oi_chain.side == "PE"].oi.sum())

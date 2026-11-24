@@ -28,6 +28,7 @@ async function load(tf){
     const empty = !data.rows || !data.rows.length;
     const bage = data.bar_age_s ?? 0;
     if (empty) setStatus('● NO DATA', 'rec');
+    else if (String(data.source).startsWith('PREVIEW')) setStatus('● PREVIEW', 'rec');
     else if (bage > 600) setStatus('● DELAYED', 'err');
     else if (live) setStatus('● LIVE', '');
     else setStatus('● NO DATA', 'rec');
@@ -273,8 +274,8 @@ function renderFlow(){
     if(r.VWAP<mid)return '<span class="r">SELL</span>';
     return '<span class="n">NEUTRAL</span>';
   };
-  $('flowLog').innerHTML=`<table><thead><tr><th>TIME</th><th>SPOT</th><th>FUTURE</th><th>VWAP</th><th>DIFFERENCE</th>
-    <th>VWAP SIGNAL</th><th>CALL</th><th>PUT</th><th>PUT−CALL</th><th>PCR</th><th>OI VIEW</th><th>SIGNAL</th></tr></thead><tbody>`+
+  $('flowLog').innerHTML=`<table><thead><tr><th>TIME</th><th>SPOT</th><th>FUT</th><th>VWAP</th><th>DIFF</th>
+    <th>V-SIG</th><th>CALL</th><th>PUT</th><th>P-C</th><th>PCR</th><th>OI</th><th>SIG</th></tr></thead><tbody>`+
     view.map(r=>`<tr><td>${esc(r.ts)}</td><td>${f0(r.close)}</td><td>${f0(r.FUTURE)}</td><td>${f0(r.VWAP)}</td>
       <td>${num(r.FUTVWAP)}</td><td>${vsig(r)}</td><td>${(r.CALL/1e6).toFixed(2)}M</td><td>${(r.PUT/1e6).toFixed(2)}M</td>
       <td class="${r.DIFF>0?'r':'g'}">${r.DIFF>0?'+':''}${(r.DIFF/1e6).toFixed(2)}M</td><td>${r.PCR.toFixed(2)}</td>
