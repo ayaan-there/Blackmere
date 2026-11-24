@@ -84,8 +84,8 @@ let tvChart=null, candleSeries=null, vwapSeries=null, liveBar=null, lastTickAt=0
 const barCache={};
 function chartTheme(){
   const dark=document.documentElement.getAttribute('data-theme')!=='light';
-  return dark?{bg:'#0b0e14',grid:'#1d2433',text:'#8b9bb4',up:'#16c784',down:'#ea3943'}
-             :{bg:'#ffffff',grid:'#e6e9ef',text:'#6b7280',up:'#22a06b',down:'#e6555a'};
+  return dark?{bg:'#14161D',grid:'rgba(255,255,255,.055)',text:'#86868B',up:'#30D158',down:'#FF453A',teal:'#64D2FF'}
+             :{bg:'#FFFFFF',grid:'rgba(0,0,0,.07)',text:'#636366',up:'#34C759',down:'#FF3B30',teal:'#0071A4'};
 }
 function fmtTime(t){const d=new Date(t*1000);return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');}
 function chartTime(ts){
@@ -97,7 +97,7 @@ function initChart(){
   const c=chartTheme();
   tvChart=LightweightCharts.createChart($('heroChart'),{
     layout:{background:{type:LightweightCharts.ColorType.Solid,color:c.bg},textColor:c.text,
-            fontFamily:'IBM Plex Mono, monospace',fontSize:11},
+            fontFamily:'JetBrains Mono, monospace',fontSize:11,attributionLogo:false},
     grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}},
     rightPriceScale:{borderVisible:false,scaleMargins:{top:.08,bottom:.08}},
     timeScale:{borderVisible:false,timeVisible:true,secondsVisible:false,rightOffset:2},
@@ -110,7 +110,7 @@ function initChart(){
   });
   candleSeries=tvChart.addCandlestickSeries({upColor:c.up,downColor:c.down,borderVisible:false,
     wickUpColor:c.up,wickDownColor:c.down,priceLineVisible:false,lastValueVisible:true});
-  vwapSeries=tvChart.addLineSeries({color:'#35D0E0',lineWidth:2,
+  vwapSeries=tvChart.addLineSeries({color:c.teal,lineWidth:2,
     lineStyle:LightweightCharts.LineStyle.Dotted,priceLineVisible:false,
     lastValueVisible:false,crosshairMarkerVisible:false});
   const box=document.createElement('div'); box.className='tv-tip'; $('heroChart').appendChild(box);
@@ -144,7 +144,16 @@ async function loadBars(tf){
   candleSeries.setData(data); vwapSeries.setData(vw);
   tvChart.timeScale().fitContent();
 }
-function renderHero(){ loadBars(currentMin); }
+function renderHero(){
+  const hs=(snap&&snap.hero)||[];
+  if(hs.length&&$('ohlLine')){
+    const hi=Math.max(...hs.map(k=>Number(k.h)).filter(Number.isFinite));
+    const lo=Math.min(...hs.map(k=>Number(k.l)).filter(Number.isFinite));
+    const op=Number(hs[0].o);
+    $('ohlLine').textContent=`HIGH ${f2(hi)}   LOW ${f2(lo)}   OPEN ${f2(op)}`;
+  }
+  loadBars(currentMin);
+}
 
 /* ---------- real-time index tick -> live candle (WebSocket/SSE) --------- */
 let tickSource=null, feedStarted=false;
@@ -192,12 +201,17 @@ function renderKPI(){
     $('kpi').innerHTML=labels.map(l=>`<div class="k${l?'':' reserved'}"><div class="l">${l||'RESERVED'}</div><div class="v n">—</div></div>`).join('');
     $('spot').textContent='—'; $('chg').textContent='—'; $('chg').className='hero-chg';
     $('pivotNote').innerHTML='Awaiting today\'s first real tick';
+    if($('mktStruct')) $('mktStruct').textContent='—';
+    if($('algoSig')) $('algoSig').textContent='—';
     return;
   }
   const st=snap.structure&&snap.structure.single&&snap.structure.single.current;
   const smap={'LONG BUILDUP':'LONG BLD','SHORT BUILDUP':'SHORT BLD',
               'LONG UNWINDING':'LONG UNW','SHORT COVERING':'SHORT COV'};
   const mkt=st&&st.state?(smap[st.state]||'MIXED'):(r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING');
+  const strength=snap.structure&&snap.structure.behaviour&&snap.structure.behaviour.strength_score||0;
+  if($('mktStruct')) $('mktStruct').textContent=st&&st.state?st.state:(r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING');
+  if($('algoSig')) $('algoSig').textContent=(strength>=50?'STRONG ':'')+(r.SIG==='BUY'?'BUY':'SELL');
   const cells=[
     ['TIME',r.ts],['SPOT',f0(idx.spot!=null?idx.spot:r.close),idx.chg>=0?'g':'r'],
     ['FUTURE',f0(r.FUTURE)],['VWAP',f0(r.VWAP)],['DIFF-VWAP',num(r.close-r.VWAP)],
@@ -217,7 +231,13 @@ function renderKPI(){
 
 function renderSignals(){
   const r=snap.rows[snap.rows.length-1], m=snap.most_active||{}, b=snap.breadth||[];
-  if(!r){ $('signalCards').innerHTML='<div class="empty">No data yet</div>'; return; }
+  if(!r){
+    const cards=[['s1','↕','MOST ACTIVE OI'],['s2','%','PUT/CALL SENTIMENT'],
+                 ['s3','↗','MARKET A/D'],['s4','◎','GIFT NIFTY']];
+    $('signalCards').innerHTML=cards.map(([cls,ic,label])=>
+      `<div class="sig ${cls}"><div class="sig-top"><span class="sig-label">${label}</span>
+       <span class="sig-icon">${ic}</span></div><div class="sig-value n">—</div><div class="sig-sub">Awaiting data</div></div>`).join('');
+    return; }
   const g=(snap.global||[]).find(x=>x[0]==='GIFT NIFTY');
   const ratio=(b[0]&&b[1])?((b[1][1]||0)/(b[1][2]||1)):null;
   const cards=[

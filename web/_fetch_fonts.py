@@ -3,9 +3,8 @@ import urllib.request, re, pathlib
 UA = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36'}
 BASE = 'https://fonts.googleapis.com/css2?'
 FAMS = [
-    ('Archivo:wght@500..800', 'archivo-var.woff2'),
-    ('IBM+Plex+Sans:wght@400..700', 'plex-sans-var.woff2'),
-    ('IBM+Plex+Mono:wght@600', 'plex-mono-600.woff2'),
+    ('Inter:wght@300..700', 'inter-var.woff2'),
+    ('JetBrains+Mono:wght@400..600', 'jetbrains-mono-var.woff2'),
 ]
 HERE = pathlib.Path(__file__).resolve().parent
 FONTS = HERE / 'fonts'
