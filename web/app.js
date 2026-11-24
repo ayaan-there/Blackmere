@@ -82,7 +82,14 @@ function seriesChart(svg, series, opts){
 }
 /* ---------- TradingView-style candlestick hero (candles only) ---------- */
 let tvChart=null, candleSeries=null, liveBar=null, lastTickAt=0, chartSecs=false;
-const barCache={};
+const barCache={}, chartBars={};
+const PIVOT_KEYS=['P','R1','S1','R2','S2','R3','S3'];
+let vwapSeries=null, pivotLines={}, indData=null, chartBarsArr=[];
+let vwapBaseValue=null, vwapBaseTypical=null, vwapCount=0, lastVwapTickAt=0, lastVwapBarTime=null;
+let indState={vwap:false,pivot:{}};
+try{ const s=JSON.parse(localStorage.getItem('axiom-indicators')||'null');
+  if(s){ indState.vwap=!!s.vwap; PIVOT_KEYS.forEach(k=>{indState.pivot[k]=!!(s.pivot&&s.pivot[k]);}); }
+}catch(e){}
 function chartTheme(){
   const dark=document.documentElement.getAttribute('data-theme')!=='light';
   return dark?{bg:'#14161D',grid:'rgba(255,255,255,.055)',text:'#86868B',up:'#30D158',down:'#FF453A',teal:'#64D2FF'}
@@ -116,17 +123,60 @@ function initChart(){
   });
   candleSeries=tvChart.addCandlestickSeries({upColor:c.up,downColor:c.down,borderVisible:false,
     wickUpColor:c.up,wickDownColor:c.down,priceLineVisible:false,lastValueVisible:true});
+  vwapSeries=tvChart.addLineSeries({color:c.teal,lineWidth:2,
+    lineStyle:LightweightCharts.LineStyle.Dotted,priceScaleId:'right',
+    priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,
+    visible:!!indState.vwap});
   const box=document.createElement('div'); box.className='tv-tip'; $('heroChart').appendChild(box);
   tvChart.subscribeCrosshairMove(p=>{
     if(!p.point || !p.seriesData){box.style.display='none';return;}
     const b=p.seriesData.get(candleSeries);
     if(!b){box.style.display='none';return;}
+    const v=indState.vwap?p.seriesData.get(vwapSeries):null;
     box.innerHTML=`<b>${fmtTime(p.time)}</b><br>O ${f2(b.open)} &nbsp; H ${f2(b.high)}`
-      +`<br>L ${f2(b.low)} &nbsp; C ${f2(b.close)}`;
+      +`<br>L ${f2(b.low)} &nbsp; C ${f2(b.close)}`
+      +(v&&isFinite(v.value)?`<br>VWAP ${f2(v.value)}`:'');
     box.style.display='block';
     box.style.left=Math.max(4,Math.min(p.point.x+12,$('heroChart').clientWidth-130))+'px';
     box.style.top=Math.max(4,p.point.y-64)+'px';
   });
+}
+async function loadIndicators(tf){
+  try{ indData=await fetch('/api/indicators?tf='+tf,{cache:'no-store'}).then(r=>r.json()); }
+  catch(_){ indData=null; }
+  applyIndicators();
+}
+function applyIndicators(){
+  if(!tvChart||!candleSeries) return;
+  const pts=((indData&&indData.vwap)||[]).map(p=>({time:chartTime(p.ts),value:+p.value}))
+    .filter(x=>x.time!=null&&isFinite(x.value));
+  if(vwapSeries){
+    vwapSeries.setData(pts);
+    vwapSeries.applyOptions({visible:!!indState.vwap});
+    vwapBaseValue=pts.length?pts[pts.length-1].value:null;
+    vwapCount=indData&&indData.vwap_count?indData.vwap_count:0;
+    lastVwapBarTime=pts.length?pts[pts.length-1].time:null;
+    const last=chartBarsArr[chartBarsArr.length-1];
+    vwapBaseTypical=last?(last.high+last.low+last.close)/3:null;
+  }
+  for(const k of Object.keys(pivotLines)){
+    try{candleSeries.removePriceLine(pivotLines[k]);}catch(_){}
+    delete pivotLines[k];
+  }
+  const pv=indData&&indData.pivot;
+  if(pv){
+    const c=chartTheme();
+    PIVOT_KEYS.forEach(k=>{
+      if(!indState.pivot[k]||!isFinite(+pv[k])) return;
+      try{
+        pivotLines[k]=candleSeries.createPriceLine({
+          price:+pv[k], lineWidth:1,
+          color:(k==='P')?c.text:(k[0]==='R'?c.down:c.up),
+          lineStyle:LightweightCharts.LineStyle.Dotted,
+          axisLabelVisible:true, title:k});
+      }catch(_){}
+    });
+  }
 }
 async function loadBars(tf){
   initChart();
@@ -138,15 +188,17 @@ async function loadBars(tf){
     catch(_){barCache[tf]=[];}
   }
   const rows=barCache[tf]||[];
-  if(!rows.length){candleSeries.setData([]);return;}
+  if(!rows.length){candleSeries.setData([]);chartBarsArr=[];loadIndicators(tf);return;}
   const data=[];
   for(const r of rows){
     const t=chartTime(r.ts),o=+r.o,h=+r.h,l=+r.l,c=+r.c;
     if(t==null||!isFinite(o)||!isFinite(h)||!isFinite(l)||!isFinite(c))continue;
     data.push({time:t,open:o,high:h,low:l,close:c});
   }
+  chartBarsArr=data;
   candleSeries.setData(data);
   tvChart.timeScale().fitContent();
+  loadIndicators(tf);
 }
 function renderHero(){
   const hs=(snap&&snap.hero)||[];
@@ -183,7 +235,22 @@ function handleTick(d){
   }else{
     liveBar={time:t,open:p,high:p,low:p,close:p};
   }
-  candleSeries.update(liveBar);                 // ONLY the chart
+  candleSeries.update(liveBar);                 // chart + enabled indicators
+  updateLiveVwap(t);
+}
+function updateLiveVwap(t){
+  if(!indState.vwap||!vwapSeries||vwapBaseValue==null||vwapBaseTypical==null) return;
+  const now=Date.now();
+  if(now-lastVwapTickAt<1000) return;
+  lastVwapTickAt=now;
+  if(liveBar.time!==lastVwapBarTime){
+    lastVwapBarTime=liveBar.time;
+    loadIndicators(chartTf());
+    return;
+  }
+  const typical=(liveBar.high+liveBar.low+liveBar.close)/3;
+  const value=vwapBaseValue+(typical-vwapBaseTypical)/Math.max(1,vwapCount);
+  if(isFinite(value)) vwapSeries.update({time:liveBar.time,value});
 }
 function openSSE(){
   if(tickSource || !window.EventSource) return;
@@ -341,6 +408,46 @@ document.querySelector('.tabs-mini').addEventListener('click',e=>{
   document.querySelectorAll('.tabs-mini .tab').forEach(x=>x.classList.toggle('active',x===b));
   ['stocks','sectors','global'].forEach(id=>{ const el=$(id); if(el) el.hidden=(id!==b.dataset.tab); });
 });
+/* ---------- chart indicator dropdown ---------- */
+function saveIndState(){
+  try{localStorage.setItem('axiom-indicators',JSON.stringify(indState));}catch(e){}
+  const n=(indState.vwap?1:0)+PIVOT_KEYS.filter(k=>indState.pivot[k]).length;
+  if($('indCount')) $('indCount').textContent=n;
+}
+function initIndicatorsUI(){
+  PIVOT_KEYS.forEach(k=>{
+    const el=document.querySelector(`[data-pivot="${k}"]`);
+    if(el) el.checked=!!indState.pivot[k];
+  });
+  const v=document.querySelector('[data-ind="vwap"]');
+  if(v) v.checked=!!indState.vwap;
+  saveIndState();
+}
+if($('indBtn')) $('indBtn').addEventListener('click',()=>{
+  const p=$('indPanel'); if(!p) return;
+  p.hidden=!p.hidden;
+  $('indBtn').setAttribute('aria-expanded',String(!p.hidden));
+});
+if($('pivotExpander')) $('pivotExpander').addEventListener('click',()=>{
+  const s=$('pivotSub'); if(!s) return;
+  s.hidden=!s.hidden;
+  $('pivotExpander').setAttribute('aria-expanded',String(!s.hidden));
+  $('pivotExpander').lastElementChild.textContent=s.hidden?'▸':'▾';
+});
+document.querySelectorAll('[data-ind]').forEach(el=>el.addEventListener('change',()=>{
+  indState.vwap=el.checked; saveIndState(); applyIndicators();
+}));
+document.querySelectorAll('[data-pivot]').forEach(el=>el.addEventListener('change',()=>{
+  indState.pivot[el.dataset.pivot]=el.checked; saveIndState(); applyIndicators();
+}));
+document.addEventListener('click',e=>{
+  if($('indPanel') && $('indMenu') && !$('indMenu').contains(e.target)){
+    $('indPanel').hidden=true;
+    if($('indBtn')) $('indBtn').setAttribute('aria-expanded','false');
+  }
+});
+initIndicatorsUI();
+
 /* UI text scale — chart canvas and the AXIOM BLACKMERE wordmark stay fixed */
 const FONT_STEPS=[0.9,1,1.1,1.2,1.4,1.6,1.8,2];
 let fontIdx=1;

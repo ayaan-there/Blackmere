@@ -145,6 +145,16 @@ class Handler(SimpleHTTPRequestHandler):
         if u.path == "/api/health":
             self._json(self._health_obj())
             return
+        if u.path == "/api/indicators":
+            q = parse_qs(u.query)
+            try:
+                tf = int(q.get("tf", ["3"])[0])
+            except Exception:
+                tf = 3
+            if tf not in (0, 1) and tf not in core.TFS:
+                tf = 3
+            self._json(core.indicators(tf))
+            return
         if u.path == "/api/static":
             d = get_snapshot(3)
             self._json({k: d.get(k) for k in ("breadth", "stocks", "sectors", "global")})

@@ -252,3 +252,23 @@ body{font-size:calc(13px*var(--fs))}
 .fs-large #flowLog table{min-width:760px}
 .fs-large .right table{min-width:420px}
 .fs-large .right td,.fs-large #flowLog td{height:auto;min-height:24px;padding:2px 3px}
+
+/* Chart indicator dropdown */
+.indicator-menu{position:absolute;top:0;right:0;z-index:40}
+.ind-btn{background:var(--subtle);border:1px solid var(--border);border-radius:8px;
+  color:var(--text-2);padding:4px 9px;font:600 9px/1.4 'JetBrains Mono',monospace;
+  letter-spacing:.06em;cursor:pointer}
+.ind-btn:hover{color:var(--text);background:var(--card-hover)}
+.ind-btn span{color:var(--blue);margin-left:4px}
+.ind-panel{position:absolute;top:26px;right:0;width:150px;padding:7px;z-index:45;
+  background:var(--elevated);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.ind-row{display:flex;align-items:center;gap:7px;padding:3px 4px;border-radius:6px;
+  font:500 10px/1.4 'JetBrains Mono',monospace;color:var(--text-2);cursor:pointer}
+.ind-row:hover{background:var(--subtle);color:var(--text)}
+.ind-row input{accent-color:var(--blue);width:12px;height:12px;margin:0}
+.ind-group{margin-top:3px;border-top:1px solid var(--border);padding-top:3px}
+.ind-group-label{width:100%;display:flex;justify-content:space-between;align-items:center;
+  background:transparent;border:none;color:var(--text-2);cursor:pointer;padding:3px 4px;
+  font:600 10px/1.4 'JetBrains Mono',monospace;letter-spacing:.04em}
+.ind-group-label:hover{color:var(--text)}
+.ind-sub{padding-left:10px}

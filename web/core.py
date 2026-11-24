@@ -62,6 +62,7 @@ _locks = {k: threading.Lock() for k in ("spot", "oi", "nse", "global")}
 
 
 PREVIEW_DAY = os.getenv("BLACKMERE_PREVIEW_DAY", "")
+PIVOT_DAY = os.getenv("BLACKMERE_PIVOT_DAY", "")   # local preview override only
 
 
 def today_str() -> str:
@@ -147,6 +148,71 @@ def fetch_global():
         return [[label, (v[0] if v else None), (v[1] if v else None)]
                 for (label, _), v in zip(GLOBAL_SPECS, vals)]
     return _cached("global", get)
+
+
+def _tf_key(tf: int) -> str:
+    return "1s" if tf == 1 else ("1m" if tf == 0 else str(tf))
+
+
+def _bars_for(tf: int) -> list:
+    return STORE.fetch("price_bars", filters={"day": today_str(), "tf": _tf_key(tf)},
+                       order="ts.asc")
+
+
+def previous_session() -> dict | None:
+    """Last trading day before today, from REAL stored 1m bars. Never hardcoded."""
+    rows = STORE.fetch("price_bars", filters={"tf": "1m"},
+                       columns="day,ts,o,h,l,c", limit=20000)
+    today = today_str()
+    days = sorted({str(r.get("day", ""))[:10] for r in rows
+                   if str(r.get("day", ""))[:10] and str(r.get("day", ""))[:10] < today})
+    if PIVOT_DAY:
+        day = PIVOT_DAY
+    elif days:
+        day = days[-1]
+    else:
+        return None
+    bars = [r for r in rows if str(r.get("day", ""))[:10] == day]
+    if not bars:
+        return None
+    return {"day": day,
+            "high": max(float(b["h"]) for b in bars if b.get("h") is not None),
+            "low": min(float(b["l"]) for b in bars if b.get("l") is not None),
+            "close": float(bars[-1]["c"])}
+
+
+def pivot_levels() -> dict | None:
+    s = previous_session()
+    if not s:
+        return None
+    h, l, c = s["high"], s["low"], s["close"]
+    p = (h + l + c) / 3
+    rng = h - l
+    return {"day": s["day"], "H": h, "L": l, "C": c,
+            "P": p, "R1": 2 * p - l, "S1": 2 * p - h,
+            "R2": p + rng, "S2": p - rng,
+            "R3": p + 2 * rng, "S3": p - 2 * rng}
+
+
+def indicators(tf: int) -> dict:
+    """VWAP from today's real 1m bars; pivot from the last prior trading day."""
+    bars = _bars_for(tf)
+    m1 = STORE.fetch("price_bars", filters={"day": today_str(), "tf": "1m"},
+                     order="ts.asc")
+    m1 = sorted(m1, key=lambda b: str(b.get("ts", "")))
+    points, cum, count, ptr = [], 0.0, 0, 0
+    for b in bars:
+        stamp = str(b.get("ts", ""))
+        while ptr < len(m1) and str(m1[ptr].get("ts", "")) <= stamp:
+            mb = m1[ptr]
+            cum += (float(mb["h"]) + float(mb["l"]) + float(mb["c"])) / 3
+            count += 1
+            ptr += 1
+        if count:
+            points.append({"ts": stamp, "value": cum / count})
+    return {"tf": tf, "vwap": points, "vwap_sum": cum, "vwap_count": count,
+            "pivot": pivot_levels(),
+            "quality": "OK" if points else "NO DATA"}
 
 
 def today_bars(tf: int) -> list:
