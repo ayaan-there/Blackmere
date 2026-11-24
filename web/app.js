@@ -4,6 +4,41 @@
    ============================================================ */
 let currentMin = 3, currentTf = '3', snap = null, pollTimer = null, loading = false;
 function chartTf(){ return currentTf==='1s'?1:(currentTf==='1m'?0:Number(currentTf)); }
+
+/* ---------- colour overrides (settings + per-card recolor) ---------- */
+const COLOR_KEYS=['bg','card','kpi','text','muted','border','grid','candleUp','candleDown','vwap','pivot','chartBg'];
+const COLOR_LABELS=[['bg','BACKGROUND'],['card','CARD'],['kpi','KPI CARD'],['text','TEXT'],
+  ['muted','MUTED TEXT'],['border','BORDER'],['grid','CHART GRID'],['candleUp','CANDLE UP'],
+  ['candleDown','CANDLE DOWN'],['vwap','VWAP LINE'],['pivot','PIVOT LINES'],['chartBg','CHART BACKGROUND']];
+const COLOR_VARS={bg:'--bg',card:'--card',kpi:'--kpi-bg',text:'--text',muted:'--text-2',
+  border:'--border',grid:'--line',candleUp:'--pos',candleDown:'--neg',vwap:'--teal',
+  pivot:'--pivot',chartBg:'--chart-bg'};
+let COLOR={}, ELEM_COLORS={}, recolorEnabled=false;
+try{ COLOR=JSON.parse(localStorage.getItem('axiom-colors')||'{}')||{}; }catch(e){}
+try{ ELEM_COLORS=JSON.parse(localStorage.getItem('axiom-card-colors')||'{}')||{}; }catch(e){}
+try{ recolorEnabled=!!JSON.parse(localStorage.getItem('axiom-recolor')||'false'); }catch(e){}
+function saveColors(){
+  try{localStorage.setItem('axiom-colors',JSON.stringify(COLOR));}catch(e){}
+}
+function saveElemColors(){
+  try{localStorage.setItem('axiom-card-colors',JSON.stringify(ELEM_COLORS));}catch(e){}
+}
+function applyElementColors(){
+  document.querySelectorAll('[data-recolor]').forEach(el=>{
+    const c=ELEM_COLORS[el.dataset.recolor];
+    if(c) el.style.backgroundColor=c; else el.style.removeProperty('background-color');
+  });
+}
+function applyColors(){
+  Object.entries(COLOR_VARS).forEach(([k,v])=>{
+    const val=COLOR[k];
+    if(val) document.documentElement.style.setProperty(v,val);
+    else document.documentElement.style.removeProperty(v);
+  });
+  applyElementColors();
+  if(typeof applyChartColors==='function') applyChartColors();
+  if(typeof updateSettingSwatches==='function') updateSettingSwatches();
+}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const f2 = n => Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -92,8 +127,11 @@ try{ const s=JSON.parse(localStorage.getItem('axiom-indicators')||'null');
 }catch(e){}
 function chartTheme(){
   const dark=document.documentElement.getAttribute('data-theme')!=='light';
-  return dark?{bg:'#14161D',grid:'rgba(255,255,255,.055)',text:'#86868B',up:'#30D158',down:'#FF453A',teal:'#64D2FF'}
-             :{bg:'#FFFFFF',grid:'rgba(0,0,0,.07)',text:'#636366',up:'#34C759',down:'#FF3B30',teal:'#0071A4'};
+  const base=dark?{bg:'#14161D',grid:'rgba(255,255,255,.055)',text:'#86868B',up:'#30D158',down:'#FF453A',teal:'#64D2FF'}
+                  :{bg:'#FFFFFF',grid:'rgba(0,0,0,.07)',text:'#636366',up:'#34C759',down:'#FF3B30',teal:'#0071A4'};
+  return {bg:COLOR.chartBg||base.bg,grid:COLOR.grid||COLOR.border||base.grid,
+          text:COLOR.muted||base.text,up:COLOR.candleUp||base.up,
+          down:COLOR.candleDown||base.down,teal:COLOR.vwap||base.teal};
 }
 function fmtTime(t){
   const d=new Date(t*1000), h=String(d.getUTCHours()).padStart(2,'0'),
@@ -171,12 +209,23 @@ function applyIndicators(){
       try{
         pivotLines[k]=candleSeries.createPriceLine({
           price:+pv[k], lineWidth:1,
-          color:(k==='P')?c.text:(k[0]==='R'?c.down:c.up),
+          color:COLOR.pivot||((k==='P')?c.text:(k[0]==='R'?c.down:c.up)),
           lineStyle:LightweightCharts.LineStyle.Dotted,
           axisLabelVisible:true, title:k});
       }catch(_){}
     });
   }
+}
+function applyChartColors(){
+  if(!tvChart||!candleSeries) return;
+  const c=chartTheme();
+  try{
+    tvChart.applyOptions({layout:{background:{type:LightweightCharts.ColorType.Solid,color:c.bg},
+      textColor:c.text},grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}}});
+    candleSeries.applyOptions({upColor:c.up,downColor:c.down,wickUpColor:c.up,wickDownColor:c.down});
+    if(vwapSeries) vwapSeries.applyOptions({color:c.teal});
+  }catch(e){}
+  applyIndicators();
 }
 async function loadBars(tf){
   initChart();
@@ -275,7 +324,7 @@ function renderKPI(){
   const r=snap.rows[snap.rows.length-1], idx=snap.index||{};
   if(!r){
     const labels=['TIME','SPOT','FUTURE','VWAP','DIFF-VWAP','CALL OI','PUT OI','FUT-VWAP','PCR','MARKET','SIGNAL'];
-    $('kpi').innerHTML=labels.map(l=>`<div class="k"><div class="l">${l}</div><div class="v n">—</div></div>`).join('');
+    $('kpi').innerHTML=labels.map((l,i)=>`<div class="k" data-recolor="kpi-${i}"><div class="l">${l}</div><div class="v n">—</div></div>`).join('');
     $('spot').textContent='—'; $('chg').textContent='—'; $('chg').className='hero-chg';
     $('pivotNote').innerHTML='Awaiting today\'s first real tick';
     return;
@@ -293,7 +342,7 @@ function renderKPI(){
     ['MARKET',mkt,'txt '+(r.PCR>1?'bull':'bear')],
     ['SIGNAL',r.SIG,'txt '+(r.SIG==='BUY'?'bull':'bear')]
   ];
-  $('kpi').innerHTML=cells.map(([l,v,c])=>`<div class="k"><div class="l">${l}</div><div class="v ${c||''}">${v}</div></div>`).join('');
+  $('kpi').innerHTML=cells.map(([l,v,c],i)=>`<div class="k" data-recolor="kpi-${i}"><div class="l">${l}</div><div class="v ${c||''}">${v}</div></div>`).join('');
   $('spot').textContent=f0(idx.spot!=null?idx.spot:r.close);
   $('chg').textContent=idx.chg!=null?`${idx.chg>=0?'+':''}${f2(idx.chg)}%`:'—';
   $('chg').className='hero-chg '+(idx.chg>=0?'':'r');
@@ -306,8 +355,8 @@ function renderSignals(){
   if(!r){
     const cards=[['s1','↕','MOST ACTIVE OI'],['s2','%','PUT/CALL SENTIMENT'],
                  ['s3','↗','MARKET STRUCTURE'],['s4','◎','ALGORITHMIC SIGNAL']];
-    $('signalCards').innerHTML=cards.map(([cls,ic,label])=>
-      `<div class="sig ${cls}"><div class="sig-top"><span class="sig-label">${label}</span>
+    $('signalCards').innerHTML=cards.map(([cls,ic,label],i)=>
+      `<div class="sig ${cls}" data-recolor="sig-${i}"><div class="sig-top"><span class="sig-label">${label}</span>
        <span class="sig-icon">${ic}</span></div><div class="sig-value n">—</div><div class="sig-sub">Awaiting data</div></div>`).join('');
     return; }
   const st=snap.structure&&snap.structure.single&&snap.structure.single.current;
@@ -320,8 +369,8 @@ function renderSignals(){
     ['s4','◎','ALGORITHMIC SIGNAL',(strength>=50?'STRONG ':'')+(r.SIG==='BUY'?'BUY':'SELL'),
       `PCR ${r.PCR.toFixed(2)} · ${r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING'}`,'G']
   ];
-  $('signalCards').innerHTML=cards.map(([cls,ic,label,value,sub,mark])=>
-    `<div class="sig ${cls}" data-mark="${mark}"><div class="sig-top"><span class="sig-label">${label}</span>
+  $('signalCards').innerHTML=cards.map(([cls,ic,label,value,sub,mark],i)=>
+    `<div class="sig ${cls}" data-mark="${mark}" data-recolor="sig-${i}"><div class="sig-top"><span class="sig-label">${label}</span>
      <span class="sig-icon">${ic}</span></div><div class="sig-value">${value}</div><div class="sig-sub">${sub}</div></div>`).join('');
 }
 
@@ -369,6 +418,7 @@ function renderNames(id,data,head){
 function renderDynamic(){
   if(!snap) return;
   renderKPI(); renderHero(); renderSignals(); renderCharts(); renderFlow();
+  applyElementColors();
 }
 /* Independent panels: these never follow the timeframe picker */
 function renderStatic(){
@@ -377,6 +427,7 @@ function renderStatic(){
   renderNames('stocks',snap.stocks,'STOCK');
   renderNames('sectors',snap.sectors,'INDEX');
   renderNames('global',snap.global,'INDEX');
+  applyElementColors();
 }
 function renderAll(){ renderDynamic(); renderStatic(); }
 let staticTimer=null;
@@ -447,6 +498,135 @@ document.addEventListener('click',e=>{
   }
 });
 initIndicatorsUI();
+
+/* ---------- settings, colour engine and HSV picker ---------- */
+function hsvToRgb(h,s,v){
+  h=((h%360)+360)%360; s=Math.max(0,Math.min(1,s)); v=Math.max(0,Math.min(1,v));
+  const c=v*s, x=c*(1-Math.abs((h/60)%2-1)), m=v-c;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
+  else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+  return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
+}
+function rgbToHsv(r,g,b){
+  r/=255;g/=255;b/=255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  let h=0;
+  if(d){ if(mx===r)h=60*(((g-b)/d)%6); else if(mx===g)h=60*((b-r)/d+2); else h=60*((r-g)/d+4); }
+  return [((h%360)+360)%360, mx?d/mx:0, mx];
+}
+function hexOf(r,g,b,a){
+  const h=n=>Math.round(n).toString(16).padStart(2,'0');
+  return '#'+h(r)+h(g)+h(b)+(a<1?h(a*255):'');
+}
+function colorToHsv(str){
+  const d=document.createElement('div'); d.style.color=str||'#000';
+  document.body.appendChild(d);
+  const c=getComputedStyle(d).color; d.remove();
+  const m=c.match(/rgba?\(([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\)/);
+  if(!m) return [0,1,1,1];
+  const [h,s,v]=rgbToHsv(+m[1],+m[2],+m[3]);
+  return [h,s,v,m[4]!=null?+m[4]:1];
+}
+function defaultColor(key){
+  const v=getComputedStyle(document.documentElement).getPropertyValue(COLOR_VARS[key]||'').trim();
+  return v||'#888888';
+}
+let pickerState={h:0,s:1,v:1,a:1}, pickerMode=null, pickerKey=null;
+function updatePickerUI(){
+  const {h,s,v,a}=pickerState, pure=hsvToRgb(h,1,1), rgb=hsvToRgb(h,s,v);
+  const sq=$('cpSquare');
+  if(sq) sq.style.background=`linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,rgb(${pure[0]},${pure[1]},${pure[2]}))`;
+  const hd=$('cpSquareHandle');
+  if(hd){hd.style.left=(s*100)+'%';hd.style.top=((1-v)*100)+'%';}
+  if($('cpHue')) $('cpHue').value=Math.round(h);
+  if($('cpAlpha')) $('cpAlpha').value=Math.round(a*100);
+  if($('cpHex')) $('cpHex').value=hexOf(rgb[0],rgb[1],rgb[2],a);
+}
+function openPicker(mode,key,anchor,title){
+  pickerMode=mode; pickerKey=key;
+  const stored=(mode==='color')?(COLOR[key]||defaultColor(key)):(ELEM_COLORS[key]||getComputedStyle(anchor).backgroundColor);
+  const [h,s,v,a]=colorToHsv(stored);
+  pickerState={h,s,v,a};
+  if($('cpTitle')) $('cpTitle').textContent=title||'COLOUR';
+  updatePickerUI();
+  const p=$('colorPicker'); if(!p) return;
+  p.hidden=false;
+  const r=anchor.getBoundingClientRect();
+  p.style.left=Math.max(6,Math.min(window.innerWidth-232,r.right+8))+'px';
+  p.style.top=Math.max(6,Math.min(window.innerHeight-250,r.top-10))+'px';
+}
+function closePicker(){ if($('colorPicker')) $('colorPicker').hidden=true; }
+function applyPicked(){
+  const {h,s,v,a}=pickerState, rgb=hsvToRgb(h,s,v), hex=hexOf(rgb[0],rgb[1],rgb[2],a);
+  if(pickerMode==='color'){COLOR[pickerKey]=hex;saveColors();applyColors();}
+  else if(pickerMode==='element'){ELEM_COLORS[pickerKey]=hex;saveElemColors();applyElementColors();}
+  closePicker();
+}
+function updateSettingSwatches(){
+  document.querySelectorAll('[data-color-key]').forEach(row=>{
+    const sw=row.querySelector('.set-swatch');
+    if(sw) sw.style.background=COLOR[row.dataset.colorKey]||defaultColor(row.dataset.colorKey);
+  });
+}
+function updateRecolorMode(){
+  document.documentElement.classList.toggle('recolor-mode',recolorEnabled);
+  try{localStorage.setItem('axiom-recolor',JSON.stringify(recolorEnabled));}catch(e){}
+  if($('recolorToggle')) $('recolorToggle').checked=recolorEnabled;
+}
+function initSettings(){
+  const rows=$('colorRows');
+  if(rows){
+    rows.innerHTML=COLOR_LABELS.map(([k,l])=>
+      `<div class="set-color" data-color-key="${k}"><span>${l}</span><i class="set-swatch"></i></div>`).join('');
+    rows.addEventListener('click',e=>{
+      const row=e.target.closest('[data-color-key]');
+      if(row) openPicker('color',row.dataset.colorKey,row,row.textContent.trim());
+    });
+  }
+  if($('settingsBtn')) $('settingsBtn').addEventListener('click',()=>{
+    const p=$('settingsPanel'); p.hidden=!p.hidden;
+  });
+  if($('settingsClose')) $('settingsClose').addEventListener('click',()=>{ $('settingsPanel').hidden=true; });
+  if($('recolorToggle')) $('recolorToggle').addEventListener('change',e=>{
+    recolorEnabled=e.target.checked; updateRecolorMode();
+  });
+  if($('resetColors')) $('resetColors').addEventListener('click',()=>{
+    COLOR={};ELEM_COLORS={};saveColors();saveElemColors();applyColors();updateSettingSwatches();
+  });
+  if($('cpDone')) $('cpDone').addEventListener('click',applyPicked);
+  if($('cpCancel')) $('cpCancel').addEventListener('click',closePicker);
+  const sq=$('cpSquare');
+  if(sq){
+    const move=e=>{
+      const r=sq.getBoundingClientRect();
+      pickerState.s=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+      pickerState.v=1-Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));
+      updatePickerUI();
+    };
+    sq.addEventListener('pointerdown',e=>{sq.setPointerCapture(e.pointerId);move(e);});
+    sq.addEventListener('pointermove',e=>{if(e.buttons)move(e);});
+  }
+  if($('cpHue')) $('cpHue').addEventListener('input',e=>{pickerState.h=+e.target.value;updatePickerUI();});
+  if($('cpAlpha')) $('cpAlpha').addEventListener('input',e=>{pickerState.a=+e.target.value/100;updatePickerUI();});
+  if($('cpHex')) $('cpHex').addEventListener('change',e=>{
+    const [h,s,v,a]=colorToHsv(e.target.value.trim());
+    pickerState={h,s,v,a};updatePickerUI();
+  });
+  updateRecolorMode();
+  updateSettingSwatches();
+}
+document.addEventListener('click',e=>{
+  if(!recolorEnabled) return;
+  if(e.target.closest('#settingsPanel,#colorPicker,#indMenu')) return;
+  const el=e.target.closest('[data-recolor]');
+  if(!el) return;
+  e.preventDefault(); e.stopPropagation();
+  openPicker('element',el.dataset.recolor,el,'CARD COLOUR');
+},true);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closePicker();$('settingsPanel').hidden=true;} });
+initSettings();
+applyColors();
 
 /* UI text scale — chart canvas and the AXIOM BLACKMERE wordmark stay fixed */
 const FONT_STEPS=[0.9,1,1.1,1.2,1.4,1.6,1.8,2];
