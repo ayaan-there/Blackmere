@@ -207,8 +207,8 @@ function openTickFeed(){
 function renderKPI(){
   const r=snap.rows[snap.rows.length-1], idx=snap.index||{};
   if(!r){
-    const labels=['TIME','SPOT','FUTURE','VWAP','DIFF-VWAP','CALL OI','PUT OI','FUT-VWAP','PCR','MARKET','SIGNAL',''];
-    $('kpi').innerHTML=labels.map(l=>`<div class="k${l?'':' reserved'}"><div class="l">${l||'RESERVED'}</div><div class="v n">—</div></div>`).join('');
+    const labels=['TIME','SPOT','FUTURE','VWAP','DIFF-VWAP','CALL OI','PUT OI','FUT-VWAP','PCR','MARKET','SIGNAL'];
+    $('kpi').innerHTML=labels.map(l=>`<div class="k"><div class="l">${l}</div><div class="v n">—</div></div>`).join('');
     $('spot').textContent='—'; $('chg').textContent='—'; $('chg').className='hero-chg';
     $('pivotNote').innerHTML='Awaiting today\'s first real tick';
     return;
@@ -224,8 +224,7 @@ function renderKPI(){
     ['CALL OI',(r.CALL/1e6).toFixed(2)+'M'],['PUT OI',(r.PUT/1e6).toFixed(2)+'M'],
     ['FUT-VWAP',num(r.FUTVWAP)],['PCR',r.PCR.toFixed(2)],
     ['MARKET',mkt,'txt '+(r.PCR>1?'bull':'bear')],
-    ['SIGNAL',r.SIG,'txt '+(r.SIG==='BUY'?'bull':'bear')],
-    ['','—','n reserved']
+    ['SIGNAL',r.SIG,'txt '+(r.SIG==='BUY'?'bull':'bear')]
   ];
   $('kpi').innerHTML=cells.map(([l,v,c])=>`<div class="k"><div class="l">${l}</div><div class="v ${c||''}">${v}</div></div>`).join('');
   $('spot').textContent=f0(idx.spot!=null?idx.spot:r.close);
@@ -343,11 +342,13 @@ document.querySelector('.tabs-mini').addEventListener('click',e=>{
   ['stocks','sectors','global'].forEach(id=>{ const el=$(id); if(el) el.hidden=(id!==b.dataset.tab); });
 });
 /* UI text scale — chart canvas and the AXIOM BLACKMERE wordmark stay fixed */
-const FONT_STEPS=[0.9,1,1.1,1.2];
+const FONT_STEPS=[0.9,1,1.1,1.2,1.4,1.6,1.8,2];
 let fontIdx=1;
 function applyFontScale(){
-  document.documentElement.style.setProperty('--fs',FONT_STEPS[fontIdx]);
-  if($('fontLabel')) $('fontLabel').textContent=Math.round(FONT_STEPS[fontIdx]*100)+'%';
+  const fs=FONT_STEPS[fontIdx];
+  document.documentElement.style.setProperty('--fs',fs);
+  document.documentElement.classList.toggle('fs-large',fs>1.4);
+  if($('fontLabel')) $('fontLabel').textContent=Math.round(fs*100)+'%';
   try{localStorage.setItem('nifty-font-idx',fontIdx);}catch(e){}
 }
 if($('fontDown')) $('fontDown').addEventListener('click',()=>{

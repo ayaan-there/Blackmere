@@ -114,6 +114,26 @@ class Handler(SimpleHTTPRequestHandler):
         finally:
             tick_feed.unsubscribe(q)
 
+    def _health_obj(self):
+        last = tick_feed.latest()
+        age = (time.time() - float(last["ts"])) if last.get("ts") else None
+        return {"ok": True, "market_open": core.market_open(),
+                "tick_age_s": int(age) if age is not None else None,
+                "tick_feed": bool(last.get("ltp")),
+                "supabase": "connected" if __import__("store").STORE.enabled else "local",
+                "source": "TODAY · LIVE" if (last.get("ltp") and core.market_open()) else "NO DATA"}
+
+    def do_HEAD(self):
+        # UptimeRobot (and many monitors) use HEAD, not GET.
+        if urlparse(self.path).path == "/api/health":
+            body = json.dumps(self._health_obj()).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            return
+        super().do_HEAD()
+
     def do_GET(self):
         u = urlparse(self.path)
         if u.path == "/ws/ticks":
@@ -123,13 +143,7 @@ class Handler(SimpleHTTPRequestHandler):
             self._sse()
             return
         if u.path == "/api/health":
-            last = tick_feed.latest()
-            age = (time.time() - float(last["ts"])) if last.get("ts") else None
-            self._json({"ok": True, "market_open": core.market_open(),
-                        "tick_age_s": int(age) if age is not None else None,
-                        "tick_feed": bool(last.get("ltp")),
-                        "supabase": "connected" if __import__("store").STORE.enabled else "local",
-                        "source": "TODAY · LIVE" if (last.get("ltp") and core.market_open()) else "NO DATA"})
+            self._json(self._health_obj())
             return
         if u.path == "/api/static":
             d = get_snapshot(3)

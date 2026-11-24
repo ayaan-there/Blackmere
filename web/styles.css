@@ -235,3 +235,20 @@ body{font-size:calc(13px*var(--fs))}
   color:var(--text-2);font:600 11px/1 'JetBrains Mono',monospace;cursor:pointer}
 .font-ctrl button:hover{background:var(--card-hover);color:var(--text)}
 .font-ctrl span{font:600 9px/1 'JetBrains Mono',monospace;color:var(--text-3);min-width:28px;text-align:center}
+
+/* 11 KPIs share the row evenly; no empty reserved slot */
+.kpi{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:4px;justify-content:stretch}
+.k{width:100%;min-width:0;padding:4px 3px;text-align:center}
+.k .l,.k .v{overflow:hidden;text-overflow:ellipsis}
+/* Above 140% the denser text needs room; allow vertical page scroll only */
+.fs-large body{overflow:auto}
+.fs-large .page{height:auto;min-height:100dvh}
+.fs-large .shell,.fs-large .left,.fs-large .right{overflow:visible}
+
+/* 200% text needs reflow: 6 KPI columns and scrollable dense tables */
+.fs-large .kpi{grid-template-columns:repeat(6,minmax(0,1fr))}
+.fs-large .k .l,.fs-large .k .v{white-space:normal;overflow:visible;text-overflow:clip}
+.fs-large #flowLog{overflow:auto}
+.fs-large #flowLog table{min-width:760px}
+.fs-large .right table{min-width:420px}
+.fs-large .right td,.fs-large #flowLog td{height:auto;min-height:24px;padding:2px 3px}

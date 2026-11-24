@@ -43,18 +43,18 @@ SECTOR_SPECS = [
     ("NIFTY SERVICES SECTOR", "NIFTY SERVICES SECTOR"),
 ]
 GLOBAL_SPECS = [
-    ("🇺🇸 United States NASDAQ 100", "%5ENDX"),
-    ("🇨🇳 China Hang Seng", "%5EHSCE"),
-    ("🇯🇵 Japan Nikkei 225", "%5EN225"),
-    ("🇰🇷 South Korea KOSPI", "%5EKS11"),
-    ("🇭🇰 Hong Kong Hang Seng Index", "%5EHSI"),
-    ("🇦🇺 Australia ASX 200", "%5EAXJO"),
-    ("🇫🇷 France CAC 40", "%5EFCHI"),
-    ("🇩🇪 Germany DAX 40", "%5EGDAXI"),
-    ("🇬🇧 United Kingdom FTSE 100", "%5EFTSE"),
-    ("🇪🇺 Europe Euro Stoxx 50", "%5ESTOXX50E"),
-    ("🇷🇺 Russia MOEX Russia Index", "MISSING"),
-    ("🇨🇦 Canada S&P/TSX Composite", "%5EGSPTSE"),
+    ("US · United States NASDAQ 100", "%5ENDX"),
+    ("CN · China Hang Seng", "%5EHSCE"),
+    ("JP · Japan Nikkei 225", "%5EN225"),
+    ("KR · South Korea KOSPI", "%5EKS11"),
+    ("HK · Hong Kong Hang Seng Index", "%5EHSI"),
+    ("AU · Australia ASX 200", "%5EAXJO"),
+    ("FR · France CAC 40", "%5EFCHI"),
+    ("DE · Germany DAX 40", "%5EGDAXI"),
+    ("GB · United Kingdom FTSE 100", "%5EFTSE"),
+    ("EU · Europe Euro Stoxx 50", "%5ESTOXX50E"),
+    ("RU · Russia MOEX Russia Index", "MISSING"),
+    ("CA · Canada S&P/TSX Composite", "%5EGSPTSE"),
 ]
 
 _cache: dict[str, tuple[float, object]] = {}
