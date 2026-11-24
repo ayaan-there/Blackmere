@@ -12,9 +12,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import api_server  # noqa: E402
+import index_feed  # noqa: E402
+import refresh     # noqa: E402
 
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8502"))
     print(f"[main] starting AXIOM BLACKMERE on 0.0.0.0:{port}", flush=True)
+    index_feed.start()
+    refresh.start()
     api_server.start(port)
