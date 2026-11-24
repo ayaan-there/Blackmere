@@ -6,9 +6,12 @@ data and never synthetic data.
 """
 from __future__ import annotations
 
+import json
 import os
 import threading
 import time
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import config
@@ -19,10 +22,43 @@ from store import STORE
 
 IST = timezone(timedelta(hours=5, minutes=30))
 TFS = (3, 5, 9, 15)
-TTL = {"spot": 60, "oi": 30, "nse": 60, "bars": 120}
+TTL = {"spot": 60, "oi": 30, "nse": 60, "bars": 120, "global": 60}
+
+# Exact tracked lists, in the order requested. No extra rows are shown.
+SECTOR_SPECS = [
+    ("GIFT NIFTY", "__gift__"),
+    ("NIFTY 50", "NIFTY 50"),
+    ("NIFTY MIDCAP 50", "NIFTY MIDCAP 50"),
+    ("NIFTY SMALLCAP 50", "NIFTY SMALLCAP 50"),
+    ("NIFTY BANK", "NIFTY BANK"),
+    ("NIFTY IT", "NIFTY IT"),
+    ("NIFTY AUTO", "NIFTY AUTO"),
+    ("NIFTY PHARMA", "NIFTY PHARMA"),
+    ("NIFTY HEALTHCARE", "NIFTY HEALTHCARE INDEX"),
+    ("NIFTY METAL", "NIFTY METAL"),
+    ("NIFTY RETAIL", "NIFTY RETAIL"),
+    ("NIFTY FMCG", "NIFTY FMCG"),
+    ("NIFTY ENERGY", "NIFTY ENERGY"),
+    ("NIFTY INFRASTRUCTURE", "NIFTY INFRASTRUCTURE"),
+    ("NIFTY SERVICES SECTOR", "NIFTY SERVICES SECTOR"),
+]
+GLOBAL_SPECS = [
+    ("🇺🇸 United States NASDAQ 100", "%5ENDX"),
+    ("🇨🇳 China Hang Seng", "%5EHSCE"),
+    ("🇯🇵 Japan Nikkei 225", "%5EN225"),
+    ("🇰🇷 South Korea KOSPI", "%5EKS11"),
+    ("🇭🇰 Hong Kong Hang Seng Index", "%5EHSI"),
+    ("🇦🇺 Australia ASX 200", "%5EAXJO"),
+    ("🇫🇷 France CAC 40", "%5EFCHI"),
+    ("🇩🇪 Germany DAX 40", "%5EGDAXI"),
+    ("🇬🇧 United Kingdom FTSE 100", "%5EFTSE"),
+    ("🇪🇺 Europe Euro Stoxx 50", "%5ESTOXX50E"),
+    ("🇷🇺 Russia MOEX Russia Index", "MISSING"),
+    ("🇨🇦 Canada S&P/TSX Composite", "%5EGSPTSE"),
+]
 
 _cache: dict[str, tuple[float, object]] = {}
-_locks = {k: threading.Lock() for k in ("spot", "oi", "nse")}
+_locks = {k: threading.Lock() for k in ("spot", "oi", "nse", "global")}
 
 
 PREVIEW_DAY = os.getenv("BLACKMERE_PREVIEW_DAY", "")
@@ -85,6 +121,32 @@ def get_live():
         except Exception:
             return {}
     return _cached("nse", get)
+
+
+def _yahoo_one(symbol: str):
+    if symbol == "MISSING":
+        return None
+    try:
+        u = ("https://query1.finance.yahoo.com/v8/finance/chart/" + symbol
+             + "?range=1d&interval=1d")
+        r = urllib.request.urlopen(urllib.request.Request(
+            u, headers={"User-Agent": "Mozilla/5.0"}), timeout=8)
+        m = json.loads(r.read())["chart"]["result"][0]["meta"]
+        p = m.get("regularMarketPrice")
+        pc = m.get("chartPreviousClose") or m.get("previousClose") or p
+        return (round(float(p), 2) if p else None,
+                round((float(p) / float(pc) - 1) * 100, 2) if p and pc else None)
+    except Exception:
+        return None
+
+
+def fetch_global():
+    def get():
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            vals = list(ex.map(lambda s: _yahoo_one(s[1]), GLOBAL_SPECS))
+        return [[label, (v[0] if v else None), (v[1] if v else None)]
+                for (label, _), v in zip(GLOBAL_SPECS, vals)]
+    return _cached("global", get)
 
 
 def today_bars(tf: int) -> list:
@@ -156,10 +218,17 @@ def snapshot(tf: int) -> dict:
         return out
 
     gift = nse.get("giftnifty") or {}
-    glob = table(nse.get("global"), "name", "price", "chg", 20)
-    if gift.get("LASTPRICE"):
-        glob.insert(0, ["GIFT NIFTY", _num(gift.get("LASTPRICE")),
-                        _num(gift.get("PERCHANGE"))])
+    glob = fetch_global()
+    all_nse = list(nse.get("indices") or []) + list(nse.get("sectors") or [])
+    sectors = []
+    for label, src in SECTOR_SPECS:
+        if src == "__gift__":
+            val, chg = _num(gift.get("LASTPRICE")), _num(gift.get("PERCHANGE"))
+        else:
+            item = next((x for x in all_nse if x.get("index") == src), None)
+            val = _num(item.get("last")) if item else None
+            chg = _num(item.get("percentChange")) if item else None
+        sectors.append([label, val, chg])
 
     out_rows = []
     for r in rows:
@@ -191,7 +260,7 @@ def snapshot(tf: int) -> dict:
                     ["WHOLE MARKET", _num(nse.get("advances")), _num(nse.get("declines")),
                      _num(nse.get("unchanged"))]],
         "stocks": table(nse.get("stocks"), "symbol", "lastPrice", "pChange", 20),
-        "sectors": table(nse.get("indices"), "index", "last", "percentChange", 20),
+        "sectors": sectors,
         "global": glob,
         "status": {"market_open": market_open(), "last_tick_age_s": None,
                    "data_quality": "OK" if rows else "NO DATA"},
