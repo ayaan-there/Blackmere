@@ -324,3 +324,6 @@ body{font-size:calc(13px*var(--fs))}
 :root{--kpi-bg:var(--subtle);--chart-bg:#14161D;--pivot:#BF5AF2}
 html[data-theme="light"]{--chart-bg:#FFFFFF;--pivot:#AF52DE}
 .k{background:var(--kpi-bg)}
+
+.grid3{grid-template-columns:1fr}
+

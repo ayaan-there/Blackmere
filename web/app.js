@@ -326,7 +326,7 @@ function renderKPI(){
     const labels=['TIME','SPOT','FUTURE','VWAP','DIFF-VWAP','CALL OI','PUT OI','FUT-VWAP','PCR','MARKET','SIGNAL'];
     $('kpi').innerHTML=labels.map((l,i)=>`<div class="k" data-recolor="kpi-${i}"><div class="l">${l}</div><div class="v n">—</div></div>`).join('');
     $('spot').textContent='—'; $('chg').textContent='—'; $('chg').className='hero-chg';
-    $('pivotNote').innerHTML='Awaiting today\'s first real tick';
+    if($('pivotNote')) $('pivotNote').innerHTML='Awaiting today\'s first real tick';
     return;
   }
   const st=snap.structure&&snap.structure.single&&snap.structure.single.current;
@@ -347,7 +347,7 @@ function renderKPI(){
   $('chg').textContent=idx.chg!=null?`${idx.chg>=0?'+':''}${f2(idx.chg)}%`:'—';
   $('chg').className='hero-chg '+(idx.chg>=0?'':'r');
   const spot=idx.spot!=null?idx.spot:r.close;
-  $('pivotNote').innerHTML=`R1 <span class="r">${f0(spot*1.008)}</span> &nbsp; P <span class="n">${f0(spot)}</span> &nbsp; S1 <span class="g">${f0(spot*0.992)}</span>`;
+  if($('pivotNote')) $('pivotNote').innerHTML=`R1 <span class="r">${f0(spot*1.008)}</span> &nbsp; P <span class="n">${f0(spot)}</span> &nbsp; S1 <span class="g">${f0(spot*0.992)}</span>`;
 }
 
 function renderSignals(){
