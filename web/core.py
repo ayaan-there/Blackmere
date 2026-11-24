@@ -22,7 +22,7 @@ from store import STORE
 
 IST = timezone(timedelta(hours=5, minutes=30))
 TFS = (3, 5, 9, 15)
-TTL = {"spot": 60, "oi": 30, "nse": 60, "bars": 120, "global": 60}
+TTL = {"spot": 60, "oi": 30, "nse": 30, "bars": 120, "global": 30}
 
 # Exact tracked lists, in the order requested. No extra rows are shown.
 SECTOR_SPECS = [

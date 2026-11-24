@@ -72,18 +72,48 @@ def _rows_loop():
                 for tf in (1,) + core.TFS:
                     tf_key = "1s" if tf == 1 else str(tf)
                     if tf == 1:
-                        bars = STORE.fetch("price_bars",
-                                           filters={"day": core.today_str(), "tf": "1s"},
-                                           order="ts.asc")
-                        bars = [{"ts": str(b.get("ts", "")), "t": str(b.get("ts", ""))[11:19],
-                                 "o": b.get("o"), "h": b.get("h"), "l": b.get("l"),
-                                 "c": b.get("c")} for b in bars]
-                    else:
-                        bars = core.today_bars(3)
+                        # 1S tab flow log is sampled at the OI cadence (30s).
+                        # Price comes from the real OI-sample spot, VWAP from
+                        # real 1m bars up to that timestamp. No invented rows.
+                        m1 = STORE.fetch("price_bars",
+                                         filters={"day": core.today_str(), "tf": "1m"},
+                                         order="ts.asc")
+                        rows, cum, n, ptr = [], 0.0, 0, 0
+                        for s in samples:
+                            stamp = str(s.get("ts", ""))
+                            while ptr < len(m1) and str(m1[ptr].get("ts", "")) <= stamp:
+                                b = m1[ptr]
+                                cum += (float(b["h"]) + float(b["l"]) + float(b["c"])) / 3
+                                n += 1
+                                ptr += 1
+                            close = float(s.get("spot") or 0)
+                            vwap = cum / n if n else close
+                            call = float(s.get("call_oi") or 0)
+                            put = float(s.get("put_oi") or 0)
+                            pcr = put / call if call else 0.0
+                            prev = rows[-1] if rows else None
+                            state, state_c = "FLAT", "n"
+                            if prev:
+                                dp, do = close - prev["close"], (call + put) - (prev["call"] + prev["put"])
+                                if dp > 0 and do > 0: state, state_c = "LONG BLD", "g"
+                                elif dp < 0 and do > 0: state, state_c = "SHORT BLD", "r"
+                                elif dp > 0 and do < 0: state, state_c = "SHORT COV", "y"
+                                elif dp < 0 and do < 0: state, state_c = "LONG UNW", "n"
+                            rows.append({
+                                "day": core.today_str(), "tf": tf_key, "ts": stamp,
+                                "close": close, "future": float(fut) if fut else 0.0,
+                                "vwap": vwap, "fut_vwap": (float(fut) if fut else 0.0) - vwap,
+                                "call": call, "put": put, "diff": put - call, "pcr": pcr,
+                                "state": state, "state_c": state_c,
+                                "sig": "BUY" if pcr > 1 else "SELL", "oi_as_of": stamp})
+                        if rows:
+                            STORE.upsert("session_rows", rows)
+                        continue
+                    bars = core.today_bars(3)
                     if not bars:
                         continue
                     rows = []
-                    groups = ([[b] for b in bars] if tf == 1 else _bucket(bars, tf))
+                    groups = _bucket(bars, tf)
                     for grp in groups:
                         label = grp[-1]["t"]
                         stamp = str(grp[-1].get("ts")) if tf == 1 else _iso(label)

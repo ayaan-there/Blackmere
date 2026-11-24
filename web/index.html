@@ -369,8 +369,9 @@ async function load(tf){
     const data = await res.json();
     if(!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
     try{ data.structure=await fetch('/api/structure',{cache:'no-store'}).then(x=>x.json()); }catch(_){}
-    snap = data;
-    renderAll();
+    const statics=snap?{breadth:snap.breadth,stocks:snap.stocks,sectors:snap.sectors,global:snap.global}:{};
+    snap = Object.assign(data, statics);
+    renderDynamic();
     const live = data.source === 'TODAY · LIVE';
     const empty = !data.rows || !data.rows.length;
     const bage = data.bar_age_s ?? 0;
@@ -426,17 +427,22 @@ function seriesChart(svg, series, opts){
   el.innerHTML=s;
 }
 /* ---------- TradingView-style candlestick hero (candles only) ---------- */
-let tvChart=null, candleSeries=null, liveBar=null, lastTickAt=0;
+let tvChart=null, candleSeries=null, liveBar=null, lastTickAt=0, chartSecs=false;
 const barCache={};
 function chartTheme(){
   const dark=document.documentElement.getAttribute('data-theme')!=='light';
   return dark?{bg:'#14161D',grid:'rgba(255,255,255,.055)',text:'#86868B',up:'#30D158',down:'#FF453A',teal:'#64D2FF'}
              :{bg:'#FFFFFF',grid:'rgba(0,0,0,.07)',text:'#636366',up:'#34C759',down:'#FF3B30',teal:'#0071A4'};
 }
-function fmtTime(t){const d=new Date(t*1000);return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');}
+function fmtTime(t){
+  const d=new Date(t*1000), h=String(d.getUTCHours()).padStart(2,'0'),
+        m=String(d.getUTCMinutes()).padStart(2,'0');
+  return chartSecs?`${h}:${m}:${String(d.getUTCSeconds()).padStart(2,'0')}`:`${h}:${m}`;
+}
 function chartTime(ts){
-  const m=String(ts||'').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  return m?Math.floor(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])/1000):null;
+  const m=String(ts||'').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if(!m) return null;
+  return Math.floor(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],chartSecs?(+m[6]||0):0)/1000);
 }
 function initChart(){
   if(tvChart || !window.LightweightCharts) return;
@@ -471,6 +477,8 @@ function initChart(){
 async function loadBars(tf){
   initChart();
   if(!tvChart) return;
+  chartSecs=(tf===1);
+  tvChart.timeScale().applyOptions({secondsVisible:chartSecs});
   if(!barCache[tf]){
     try{const d=await fetch('/api/bars?tf='+tf,{cache:'no-store'}).then(r=>r.json());barCache[tf]=d.bars||[];}
     catch(_){barCache[tf]=[];}
@@ -505,10 +513,16 @@ function handleTick(d){
   if(now-lastTickAt<10) return;
   lastTickAt=now;
   const dt=new Date(now+19800000);              // IST wall clock
-  const step=currentMin||3;
-  const b=Math.floor((dt.getUTCHours()*60+dt.getUTCMinutes())/step)*step;
-  const t=Math.floor(Date.UTC(dt.getUTCFullYear(),dt.getUTCMonth(),dt.getUTCDate(),
-                              Math.floor(b/60),b%60)/1000);
+  const Y=dt.getUTCFullYear(),M=dt.getUTCMonth(),D=dt.getUTCDate(),
+        h=dt.getUTCHours(),m=dt.getUTCMinutes(),s=dt.getUTCSeconds();
+  let t;
+  if(currentMin===1){
+    t=Math.floor(Date.UTC(Y,M,D,h,m,s)/1000);
+  }else{
+    const step=currentMin||3;
+    const b=Math.floor((h*60+m)/step)*step;
+    t=Math.floor(Date.UTC(Y,M,D,Math.floor(b/60),b%60)/1000);
+  }
   const p=+d.ltp;
   if(liveBar && liveBar.time===t){
     liveBar.high=Math.max(liveBar.high,p); liveBar.low=Math.min(liveBar.low,p); liveBar.close=p;
@@ -631,10 +645,28 @@ function renderNames(id,data,head){
   $(id).innerHTML=rows?`<table><thead><tr><th>${head}</th><th>LAST</th><th>CHG%</th></tr></thead><tbody>${rows}</tbody></table>`
     :`<div class="empty">No data returned by source</div>`;
 }
-function renderAll(){
+/* Timeframe-driven panels: KPI, hero candles, signal cards, minigraphs, flow log */
+function renderDynamic(){
   if(!snap) return;
-  renderKPI(); renderHero(); renderSignals(); renderCharts(); renderFlow(); renderBreadth();
-  renderNames('stocks',snap.stocks,'STOCK'); renderNames('sectors',snap.sectors,'INDEX'); renderNames('global',snap.global,'INDEX');
+  renderKPI(); renderHero(); renderSignals(); renderCharts(); renderFlow();
+}
+/* Independent panels: these never follow the timeframe picker */
+function renderStatic(){
+  if(!snap) return;
+  renderBreadth();
+  renderNames('stocks',snap.stocks,'STOCK');
+  renderNames('sectors',snap.sectors,'INDEX');
+  renderNames('global',snap.global,'INDEX');
+}
+function renderAll(){ renderDynamic(); renderStatic(); }
+let staticTimer=null;
+async function loadStatic(){
+  try{
+    const d=await fetch('/api/static',{cache:'no-store'}).then(r=>r.json());
+    if(!snap) snap={};
+    Object.assign(snap,d);
+    renderStatic();
+  }catch(_){}
 }
 
 /* ---------- controls ---------- */
@@ -684,6 +716,8 @@ $('themeBtn').addEventListener('click',()=>{
 });
 applyTheme((()=>{try{return localStorage.getItem('nifty-theme')||'light';}catch(e){return 'light';}})());
 setTimeframe(3);
+loadStatic();
+if(!staticTimer) staticTimer=setInterval(loadStatic,10000);
 
 </script>
 </body>

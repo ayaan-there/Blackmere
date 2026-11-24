@@ -131,6 +131,10 @@ class Handler(SimpleHTTPRequestHandler):
                         "supabase": "connected" if __import__("store").STORE.enabled else "local",
                         "source": "TODAY · LIVE" if (last.get("ltp") and core.market_open()) else "NO DATA"})
             return
+        if u.path == "/api/static":
+            d = get_snapshot(3)
+            self._json({k: d.get(k) for k in ("breadth", "stocks", "sectors", "global")})
+            return
         if u.path == "/api/structure":
             samples = STORE.fetch("oi_samples", filters={"day": core.today_str()},
                                   order="ts.asc")
