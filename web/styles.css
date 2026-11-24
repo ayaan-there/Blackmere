@@ -164,3 +164,12 @@ button{font:inherit;color:inherit}
   .hero{min-height:340px}
   #flowLog{flex:0 0 auto;max-height:260px}
 }
+
+[hidden]{display:none!important}
+.table-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.tabs-mini{display:flex;gap:4px}
+.tabs-mini .tab{background:transparent;border:1px solid transparent;border-radius:6px;padding:2px 8px;color:var(--text-3);font:600 9px/1.4 'JetBrains Mono',monospace;letter-spacing:.05em;cursor:pointer}
+.tabs-mini .tab:hover{color:var(--text)}
+.tabs-mini .tab.active{background:var(--subtle);border-color:var(--border);color:var(--text)}
+.tabbody{flex:1 1 auto;min-height:0;overflow-y:auto}
+

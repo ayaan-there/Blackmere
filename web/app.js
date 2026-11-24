@@ -313,6 +313,11 @@ function setTimeframe(m){
 document.querySelector('.dock').addEventListener('click',e=>{
   const b=e.target.closest('.dock-btn[data-min]'); if(b) setTimeframe(+b.dataset.min);
 });
+document.querySelector('.tabs-mini').addEventListener('click',e=>{
+  const b=e.target.closest('.tab[data-tab]'); if(!b) return;
+  document.querySelectorAll('.tabs-mini .tab').forEach(x=>x.classList.toggle('active',x===b));
+  ['stocks','sectors','global'].forEach(id=>{ const el=$(id); if(el) el.hidden=(id!==b.dataset.tab); });
+});
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   $('themeBtn').textContent=t==='light'?'☀':'☾';
