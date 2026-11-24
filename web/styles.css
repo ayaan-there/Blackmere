@@ -327,3 +327,6 @@ html[data-theme="light"]{--chart-bg:#FFFFFF;--pivot:#AF52DE}
 
 .grid3{grid-template-columns:1fr}
 
+
+#heroChart{overflow:hidden}
+

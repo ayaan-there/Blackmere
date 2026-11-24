@@ -116,6 +116,7 @@ function seriesChart(svg, series, opts){
   el.innerHTML=s;
 }
 /* ---------- TradingView-style candlestick hero (candles only) ---------- */
+let currentFs=1;
 let tvChart=null, candleSeries=null, liveBar=null, lastTickAt=0, chartSecs=false;
 const barCache={}, chartBars={};
 const PIVOT_KEYS=['P','R1','S1','R2','S2','R3','S3'];
@@ -147,8 +148,9 @@ function initChart(){
   if(tvChart || !window.LightweightCharts) return;
   const c=chartTheme();
   tvChart=LightweightCharts.createChart($('heroChart'),{
+    autoSize:true,
     layout:{background:{type:LightweightCharts.ColorType.Solid,color:c.bg},textColor:c.text,
-            fontFamily:'JetBrains Mono, monospace',fontSize:12,attributionLogo:false},
+            fontFamily:'JetBrains Mono, monospace',fontSize:Math.round(12*currentFs),attributionLogo:false},
     grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}},
     rightPriceScale:{borderVisible:false,scaleMargins:{top:.08,bottom:.08}},
     timeScale:{borderVisible:false,timeVisible:true,secondsVisible:false,rightOffset:2},
@@ -179,6 +181,27 @@ function initChart(){
     box.style.top=Math.max(4,p.point.y-64)+'px';
   });
 }
+function resizeChart(){
+  if(!tvChart) return;
+  const el=$('heroChart'); if(!el) return;
+  let range=null;
+  try{ range=tvChart.timeScale().getVisibleLogicalRange(); }catch(e){}
+  try{ tvChart.resize(el.clientWidth,el.clientHeight,true); }catch(e){}
+  if(range){ try{ tvChart.timeScale().setVisibleLogicalRange(range); }catch(e){} }
+}
+function syncChartFont(){
+  if(!tvChart) return;
+  try{ tvChart.applyOptions({layout:{fontSize:Math.round(12*currentFs)}}); }catch(e){}
+  resizeChart();
+}
+let chartResizeTimer=null;
+function scheduleChartResize(){
+  clearTimeout(chartResizeTimer);
+  chartResizeTimer=setTimeout(syncChartFont,60);
+}
+window.addEventListener('resize',scheduleChartResize);
+if(window.visualViewport) window.visualViewport.addEventListener('resize',scheduleChartResize);
+
 async function loadIndicators(tf){
   try{ indData=await fetch('/api/indicators?tf='+tf,{cache:'no-store'}).then(r=>r.json()); }
   catch(_){ indData=null; }
@@ -633,10 +656,12 @@ const FONT_STEPS=[0.9,1,1.1,1.2,1.4,1.6,1.8,2];
 let fontIdx=1;
 function applyFontScale(){
   const fs=FONT_STEPS[fontIdx];
+  currentFs=fs;
   document.documentElement.style.setProperty('--fs',fs);
   document.documentElement.classList.toggle('fs-large',fs>1.4);
   if($('fontLabel')) $('fontLabel').textContent=Math.round(fs*100)+'%';
   try{localStorage.setItem('nifty-font-idx',fontIdx);}catch(e){}
+  syncChartFont();
 }
 if($('fontDown')) $('fontDown').addEventListener('click',()=>{
   fontIdx=Math.max(0,fontIdx-1); applyFontScale();
