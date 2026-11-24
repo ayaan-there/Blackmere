@@ -154,7 +154,7 @@ class Handler(SimpleHTTPRequestHandler):
                 tf = int(q.get("tf", ["3"])[0])
             except Exception:
                 tf = 3
-            tf_key = "1s" if tf == 1 else str(tf if tf in core.TFS else 3)
+            tf_key = "1s" if tf == 1 else ("1m" if tf == 0 else str(tf if tf in core.TFS else 3))
             rows = STORE.fetch("price_bars", filters={"day": core.today_str(), "tf": tf_key},
                                order="ts.asc")
             self._json({"tf": tf, "bars": rows})
@@ -165,7 +165,7 @@ class Handler(SimpleHTTPRequestHandler):
                 tf = int(q.get("tf", ["3"])[0])
             except Exception:
                 tf = 3
-            if tf != 1 and tf not in core.TFS:
+            if tf not in (0, 1) and tf not in core.TFS:
                 tf = 3
             try:
                 self._json(get_snapshot(tf))

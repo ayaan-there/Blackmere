@@ -69,8 +69,8 @@ def _rows_loop():
             try:
                 samples = core.oi_samples()
                 fut = data_loader.fetch_futures_ltp()
-                for tf in (1,) + core.TFS:
-                    tf_key = "1s" if tf == 1 else str(tf)
+                for tf in (0, 1) + core.TFS:
+                    tf_key = "1s" if tf == 1 else ("1m" if tf == 0 else str(tf))
                     if tf == 1:
                         # 1S tab flow log is sampled at the OI cadence (30s).
                         # Price comes from the real OI-sample spot, VWAP from
@@ -116,7 +116,7 @@ def _rows_loop():
                     groups = _bucket(bars, tf)
                     for grp in groups:
                         label = grp[-1]["t"]
-                        stamp = str(grp[-1].get("ts")) if tf == 1 else _iso(label)
+                        stamp = _iso(label)
                         close = float(grp[-1]["c"])
                         vals = [(float(b["h"]) + float(b["l"]) + float(b["c"])) / 3 for b in grp]
                         vwap = sum(vals) / len(vals)
@@ -148,9 +148,10 @@ def _rows_loop():
                     if rows:
                         STORE.upsert("session_rows", rows)
                         STORE.upsert("price_bars", [{
-                            "day": core.today_str(), "tf": "3", "ts": _iso(b["t"]),
-                            "o": float(b["o"]), "h": float(b["h"]),
-                            "l": float(b["l"]), "c": float(b["c"])} for b in core.today_bars(3)])
+                            "day": core.today_str(), "tf": tf_key, "ts": _iso(g[-1]["t"]),
+                            "o": float(g[0]["o"]), "h": max(float(x["h"]) for x in g),
+                            "l": min(float(x["l"]) for x in g),
+                            "c": float(g[-1]["c"])} for g in groups])
             except Exception as exc:
                 print(f"[refresh] rows failed: {type(exc).__name__}", flush=True)
         time.sleep(10)
