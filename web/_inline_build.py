@@ -9,11 +9,14 @@ html = (HERE / 'index.html').read_text(encoding='utf-8')
 # make idempotent: restore placeholders from a previously inlined build
 html = re.sub(r'<style>.*?</style>', '<link rel="stylesheet" href="styles.css">',
               html, count=1, flags=re.S)
-html = re.sub(r'<script>.*?</script>', '<script src="app.js"></script>',
+html = re.sub(r'<script>.*?</script>',
+              '<script src="vendor/lightweight-charts.js" data-inline="vendor"></script>\n'
+              '<script src="app.js" data-inline="app"></script>',
               html, count=1, flags=re.S)
 css = (HERE / 'styles.css').read_text(encoding='utf-8')
 fonts = (HERE / 'fonts.css').read_text(encoding='utf-8')
 js = (HERE / 'app.js').read_text(encoding='utf-8')
+vendor = (HERE / 'vendor' / 'lightweight-charts.js').read_text(encoding='utf-8')
 
 # inline each woff2 as a data URI -> zero font requests over ngrok
 def embed(m):
@@ -25,7 +28,10 @@ fonts = re.sub(r"url\(fonts/([\w.-]+\.woff2)\) format\('woff2'\)", embed, fonts)
 css = css.replace("@import url('fonts.css');   /* self-hosted: no external network round-trip */", fonts)
 
 html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\n' + css + '\n</style>')
-html = html.replace('<script src="app.js"></script>', '<script>\n' + js + '\n</script>')
+html = html.replace('<script src="vendor/lightweight-charts.js" data-inline="vendor"></script>',
+                    '<script>\n' + vendor + '\n</script>')
+html = html.replace('<script src="app.js" data-inline="app"></script>',
+                    '<script>\n' + js + '\n</script>')
 
 (HERE / 'index.html').write_text(html, encoding='utf-8')
 print('inlined index.html:', len(html), 'bytes')

@@ -92,7 +92,8 @@ def today_bars(tf: int) -> list:
 
 
 def today_rows(tf: int) -> list:
-    return STORE.fetch("session_rows", filters={"day": today_str(), "tf": str(tf)},
+    key = "1s" if tf == 1 else str(tf)
+    return STORE.fetch("session_rows", filters={"day": today_str(), "tf": key},
                        order="ts.asc")
 
 

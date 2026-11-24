@@ -69,14 +69,24 @@ def _rows_loop():
             try:
                 samples = core.oi_samples()
                 fut = data_loader.fetch_futures_ltp()
-                for tf in core.TFS:
-                    bars = core.today_bars(3)
+                for tf in (1,) + core.TFS:
+                    tf_key = "1s" if tf == 1 else str(tf)
+                    if tf == 1:
+                        bars = STORE.fetch("price_bars",
+                                           filters={"day": core.today_str(), "tf": "1s"},
+                                           order="ts.asc")
+                        bars = [{"ts": str(b.get("ts", "")), "t": str(b.get("ts", ""))[11:19],
+                                 "o": b.get("o"), "h": b.get("h"), "l": b.get("l"),
+                                 "c": b.get("c")} for b in bars]
+                    else:
+                        bars = core.today_bars(3)
                     if not bars:
                         continue
                     rows = []
-                    for grp in _bucket(bars, tf):
+                    groups = ([[b] for b in bars] if tf == 1 else _bucket(bars, tf))
+                    for grp in groups:
                         label = grp[-1]["t"]
-                        stamp = _iso(label)
+                        stamp = str(grp[-1].get("ts")) if tf == 1 else _iso(label)
                         close = float(grp[-1]["c"])
                         vals = [(float(b["h"]) + float(b["l"]) + float(b["c"])) / 3 for b in grp]
                         vwap = sum(vals) / len(vals)
@@ -98,7 +108,7 @@ def _rows_loop():
                             elif dp < 0 and do < 0:
                                 state, state_c = "LONG UNW", "n"
                         rows.append({
-                            "day": core.today_str(), "tf": str(tf), "ts": stamp,
+                            "day": core.today_str(), "tf": tf_key, "ts": stamp,
                             "close": close, "future": float(fut) if fut else 0.0,
                             "vwap": vwap, "fut_vwap": (float(fut) if fut else 0.0) - vwap,
                             "call": call, "put": put, "diff": put - call, "pcr": pcr,

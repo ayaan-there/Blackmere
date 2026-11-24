@@ -35,6 +35,15 @@ MIN_PREMIUM = 1.0
 LIVE_ENABLED = True            # .env me creds + refresh token ready hain
 REFRESH_SECONDS = 30
 
+# ------------------------------------------- market structure engine
+# Initial test values only — configurable, not universally optimal.
+PRICE_THRESHOLD_PCT = 0.05
+OI_THRESHOLD_PCT = 0.5
+STRUCTURE_WINDOW = 30          # rolling observations
+STRENGTH_LOOKBACK = 60         # volatility normalisation window
+PERSISTENCE_K = 10             # recent observations for persistence/consistency
+DOMINANT_MIN_SHARE = 0.25      # below this -> MIXED
+
 
 def angel_credentials() -> dict:
     """Read creds from .env (python-dotenv auto-loaded by callers)."""

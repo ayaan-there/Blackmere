@@ -21,6 +21,7 @@ async function load(tf){
     const res = await fetch(`/api/snapshot?tf=${tf}`,{cache:'no-store'});
     const data = await res.json();
     if(!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    try{ data.structure=await fetch('/api/structure',{cache:'no-store'}).then(x=>x.json()); }catch(_){}
     snap = data;
     renderAll();
     const live = data.source === 'TODAY · LIVE';
@@ -78,39 +79,92 @@ function seriesChart(svg, series, opts){
   el.setAttribute('viewBox',`0 0 ${W} ${H}`);
   el.innerHTML=s;
 }
-/* hero: REAL Nifty 50 index price (Angel One candles) */
-function renderHero(){
-  const hero=(snap.hero||[]).slice(-60);
-  if(!hero.length){ $('heroChart').innerHTML=''; $('heroAxis').innerHTML=''; return; }
-  seriesChart('heroChart',[{values:hero.map(k=>k.c),color:'#35D0E0'}],
-              {height:132,yLabels:true,fill:true,labelBg:'rgba(8,24,70,.62)'});
-  const t=hero.map(k=>k.t);
-  const at=i=>t[Math.round(i*(t.length-1))]||'';
-  $('heroAxis').innerHTML=`<span>${at(0)}</span><span>${at(.33)}</span><span>${at(.66)}</span><span>${at(1)}</span>`;
+/* ---------- TradingView-style candlestick hero (candles only) ---------- */
+let tvChart=null, candleSeries=null, vwapSeries=null, liveBar=null, lastTickAt=0;
+const barCache={};
+function chartTheme(){
+  const dark=document.documentElement.getAttribute('data-theme')!=='light';
+  return dark?{bg:'#0b0e14',grid:'#1d2433',text:'#8b9bb4',up:'#16c784',down:'#ea3943'}
+             :{bg:'#ffffff',grid:'#e6e9ef',text:'#6b7280',up:'#22a06b',down:'#e6555a'};
 }
-
-/* ---------- real-time index line: Angel One tick -> WebSocket/SSE -------
-   Updates ONLY the Nifty 50 hero chart on every incoming tick.
-   WebSocket first (lowest latency over tunnels), SSE as fallback.        */
-let tickSource=null, feedStarted=false, lastTickAt=0;
-function handleTick(d){
-  if(!d || !d.ltp || !snap || !snap.hero || !snap.hero.length) return;
-  const now=Date.now();
-  if(now-lastTickAt<10) return;                 // near-zero throttle
-  lastTickAt=now;
-  const dt=new Date(now+19800000);              // IST = UTC+5:30
-  const b=Math.floor((dt.getUTCHours()*60+dt.getUTCMinutes())/currentMin)*currentMin;
-  const label=String(Math.floor(b/60)).padStart(2,'0')+':'+String(b%60).padStart(2,'0');
-  const hero=snap.hero, last=hero[hero.length-1];
-  if(last.t===label){
-    last.c=d.ltp;
-    last.h=Math.max(last.h,d.ltp);
-    last.l=Math.min(last.l,d.ltp);
-  }else{
-    hero.push({t:label,o:d.ltp,h:d.ltp,l:d.ltp,c:d.ltp});
-    if(hero.length>120) hero.shift();
+function fmtTime(t){const d=new Date(t*1000);return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');}
+function chartTime(ts){
+  const m=String(ts||'').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  return m?Math.floor(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])/1000):null;
+}
+function initChart(){
+  if(tvChart || !window.LightweightCharts) return;
+  const c=chartTheme();
+  tvChart=LightweightCharts.createChart($('heroChart'),{
+    layout:{background:{type:LightweightCharts.ColorType.Solid,color:c.bg},textColor:c.text,
+            fontFamily:'IBM Plex Mono, monospace',fontSize:11},
+    grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}},
+    rightPriceScale:{borderVisible:false,scaleMargins:{top:.08,bottom:.08}},
+    timeScale:{borderVisible:false,timeVisible:true,secondsVisible:false,rightOffset:2},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal,
+               vertLine:{color:c.text,labelBackgroundColor:c.text},
+               horzLine:{color:c.text,labelBackgroundColor:c.text}},
+    handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+    handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},
+    localization:{timeFormatter:p=>fmtTime(p.time)}
+  });
+  candleSeries=tvChart.addCandlestickSeries({upColor:c.up,downColor:c.down,borderVisible:false,
+    wickUpColor:c.up,wickDownColor:c.down,priceLineVisible:false,lastValueVisible:true});
+  vwapSeries=tvChart.addLineSeries({color:'#35D0E0',lineWidth:2,
+    lineStyle:LightweightCharts.LineStyle.Dotted,priceLineVisible:false,
+    lastValueVisible:false,crosshairMarkerVisible:false});
+  const box=document.createElement('div'); box.className='tv-tip'; $('heroChart').appendChild(box);
+  tvChart.subscribeCrosshairMove(p=>{
+    if(!p.point || !p.seriesData){box.style.display='none';return;}
+    const b=p.seriesData.get(candleSeries), v=p.seriesData.get(vwapSeries);
+    if(!b){box.style.display='none';return;}
+    box.innerHTML=`<b>${fmtTime(p.time)}</b><br>O ${f2(b.open)} &nbsp; H ${f2(b.high)}`
+      +`<br>L ${f2(b.low)} &nbsp; C ${f2(b.close)}`+(v?`<br>VWAP ${f2(v)}`:'');
+    box.style.display='block';
+    box.style.left=Math.max(4,Math.min(p.point.x+12,$('heroChart').clientWidth-130))+'px';
+    box.style.top=Math.max(4,p.point.y-64)+'px';
+  });
+}
+async function loadBars(tf){
+  initChart();
+  if(!tvChart) return;
+  if(!barCache[tf]){
+    try{const d=await fetch('/api/bars?tf='+tf,{cache:'no-store'}).then(r=>r.json());barCache[tf]=d.bars||[];}
+    catch(_){barCache[tf]=[];}
   }
-  renderHero();                                 // ONLY the index chart
+  const rows=barCache[tf]||[];
+  if(!rows.length){candleSeries.setData([]);vwapSeries.setData([]);return;}
+  const data=[],vw=[];let cum=0,n=0;
+  for(const r of rows){
+    const t=chartTime(r.ts),o=+r.o,h=+r.h,l=+r.l,c=+r.c;
+    if(t==null||!isFinite(o)||!isFinite(h)||!isFinite(l)||!isFinite(c))continue;
+    data.push({time:t,open:o,high:h,low:l,close:c});
+    cum+=(h+l+c)/3; n++; vw.push({time:t,value:cum/n});
+  }
+  candleSeries.setData(data); vwapSeries.setData(vw);
+  tvChart.timeScale().fitContent();
+}
+function renderHero(){ loadBars(currentMin); }
+
+/* ---------- real-time index tick -> live candle (WebSocket/SSE) --------- */
+let tickSource=null, feedStarted=false;
+function handleTick(d){
+  if(!d || !d.ltp || !tvChart || !candleSeries) return;
+  const now=Date.now();
+  if(now-lastTickAt<10) return;
+  lastTickAt=now;
+  const dt=new Date(now+19800000);              // IST wall clock
+  const step=currentMin||3;
+  const b=Math.floor((dt.getUTCHours()*60+dt.getUTCMinutes())/step)*step;
+  const t=Math.floor(Date.UTC(dt.getUTCFullYear(),dt.getUTCMonth(),dt.getUTCDate(),
+                              Math.floor(b/60),b%60)/1000);
+  const p=+d.ltp;
+  if(liveBar && liveBar.time===t){
+    liveBar.high=Math.max(liveBar.high,p); liveBar.low=Math.min(liveBar.low,p); liveBar.close=p;
+  }else{
+    liveBar={time:t,open:p,high:p,low:p,close:p};
+  }
+  candleSeries.update(liveBar);                 // ONLY the chart
 }
 function openSSE(){
   if(tickSource || !window.EventSource) return;
@@ -140,12 +194,16 @@ function renderKPI(){
     $('pivotNote').innerHTML='Awaiting today\'s first real tick';
     return;
   }
+  const st=snap.structure&&snap.structure.single&&snap.structure.single.current;
+  const smap={'LONG BUILDUP':'LONG BLD','SHORT BUILDUP':'SHORT BLD',
+              'LONG UNWINDING':'LONG UNW','SHORT COVERING':'SHORT COV'};
+  const mkt=st&&st.state?(smap[st.state]||'MIXED'):(r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING');
   const cells=[
     ['TIME',r.ts],['SPOT',f0(idx.spot!=null?idx.spot:r.close),idx.chg>=0?'g':'r'],
     ['FUTURE',f0(r.FUTURE)],['VWAP',f0(r.VWAP)],['DIFF-VWAP',num(r.close-r.VWAP)],
     ['CALL OI',(r.CALL/1e6).toFixed(2)+'M'],['PUT OI',(r.PUT/1e6).toFixed(2)+'M'],
     ['FUT-VWAP',num(r.FUTVWAP)],['PCR',r.PCR.toFixed(2)],
-    ['MARKET',r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING','txt '+(r.PCR>1?'bull':'bear')],
+    ['MARKET',mkt,'txt '+(r.PCR>1?'bull':'bear')],
     ['SIGNAL',r.SIG,'txt '+(r.SIG==='BUY'?'bull':'bear')]
   ];
   $('kpi').innerHTML=cells.map(([l,v,c])=>`<div class="k"><div class="l">${l}</div><div class="v ${c||''}">${v}</div></div>`).join('');
@@ -185,10 +243,19 @@ function renderFlow(){
   const data=(snap.rows||[]).slice().reverse();
   if(!data.length){ $('flowLog').innerHTML='<div class="empty">No data yet</div>'; return; }
   const view=$('rowView').value==='9'?data.slice(0,9):data;
+  const hs=(snap.hero||[]).map(k=>Number(k.h)).filter(Number.isFinite);
+  const ls=(snap.hero||[]).map(k=>Number(k.l)).filter(Number.isFinite);
+  const mid=(hs.length&&ls.length)?(Math.max(...hs)+Math.min(...ls))/2:null;
+  const vsig=r=>{
+    if(mid==null||!Number.isFinite(r.VWAP))return '<span class="n">NO DATA</span>';
+    if(r.VWAP>mid)return '<span class="g">BUY</span>';
+    if(r.VWAP<mid)return '<span class="r">SELL</span>';
+    return '<span class="n">NEUTRAL</span>';
+  };
   $('flowLog').innerHTML=`<table><thead><tr><th>TIME</th><th>SPOT</th><th>FUTURE</th><th>VWAP</th><th>DIFFERENCE</th>
-    <th>CALL</th><th>PUT</th><th>PUT−CALL</th><th>PCR</th><th>OI VIEW</th><th>SIGNAL</th></tr></thead><tbody>`+
+    <th>VWAP SIGNAL</th><th>CALL</th><th>PUT</th><th>PUT−CALL</th><th>PCR</th><th>OI VIEW</th><th>SIGNAL</th></tr></thead><tbody>`+
     view.map(r=>`<tr><td>${esc(r.ts)}</td><td>${f0(r.close)}</td><td>${f0(r.FUTURE)}</td><td>${f0(r.VWAP)}</td>
-      <td>${num(r.FUTVWAP)}</td><td>${(r.CALL/1e6).toFixed(2)}M</td><td>${(r.PUT/1e6).toFixed(2)}M</td>
+      <td>${num(r.FUTVWAP)}</td><td>${vsig(r)}</td><td>${(r.CALL/1e6).toFixed(2)}M</td><td>${(r.PUT/1e6).toFixed(2)}M</td>
       <td class="${r.DIFF>0?'r':'g'}">${r.DIFF>0?'+':''}${(r.DIFF/1e6).toFixed(2)}M</td><td>${r.PCR.toFixed(2)}</td>
       <td><span class="${r.STATE_C}">${esc(r.STATE)}</span></td>
       <td class="${r.SIG==='BUY'?'g':'r'}"><b>${r.SIG}</b></td></tr>`).join('')+`</tbody></table>`;
@@ -214,8 +281,9 @@ function renderAll(){
 function setTimeframe(m){
   currentMin=m;
   document.querySelectorAll('.dock-btn[data-min]').forEach(b=>b.classList.toggle('active',+b.dataset.min===m));
-  $('refreshLabel').textContent=`${m}-MIN AUTO REFRESH`;
-  $('heroPill').textContent=`${m} MIN`;
+  const lab=m===1?'1S':`${m}M`;
+  $('refreshLabel').textContent=`${lab} CANDLES`;
+  $('heroPill').textContent=lab;
   load(m);
   if(pollTimer) clearInterval(pollTimer);
   pollTimer=setInterval(()=>load(currentMin),60000);
@@ -229,6 +297,7 @@ function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   $('themeBtn').textContent=t==='light'?'☀':'☾';
   try{localStorage.setItem('nifty-theme',t);}catch(e){}
+  if(tvChart){tvChart.remove();tvChart=null;candleSeries=null;vwapSeries=null;liveBar=null;loadBars(currentMin);}
   if(snap) renderAll();
 }
 $('themeBtn').addEventListener('click',()=>{

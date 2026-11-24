@@ -6,15 +6,28 @@ from __future__ import annotations
 
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 
 import config
 import data_loader
 import tick_feed
 
-from core import market_open
+from core import market_open, today_str
+from store import STORE
 
+IST = timezone(timedelta(hours=5, minutes=30))
 TOKEN = "99926000"
 FEED = {"sws": None}
+BARS_1S: dict[str, dict] = {}
+_BAR_LOCK = threading.Lock()
+
+
+def _flush_1s():
+    with _BAR_LOCK:
+        rows = list(BARS_1S.values())[-4000:]
+        BARS_1S.clear()
+    if rows:
+        STORE.upsert("price_bars", rows)
 
 
 def _number(v):
@@ -47,6 +60,30 @@ def on_data(wsapp, message):
     except Exception:
         ts = time.time()
     tick_feed.publish(ltp, ts)
+    _capture_1s(ltp, ts)
+
+
+def _capture_1s(ltp: float, ts: float):
+    dt = datetime.fromtimestamp(ts, IST).replace(microsecond=0)
+    key = dt.isoformat()
+    with _BAR_LOCK:
+        bar = BARS_1S.get(key)
+        if bar is None:
+            BARS_1S[key] = {"day": dt.date().isoformat(), "tf": "1s", "ts": key,
+                            "o": ltp, "h": ltp, "l": ltp, "c": ltp}
+        else:
+            bar["h"] = max(bar["h"], ltp)
+            bar["l"] = min(bar["l"], ltp)
+            bar["c"] = ltp
+
+
+def _flush_loop():
+    while True:
+        time.sleep(10)
+        try:
+            _flush_1s()
+        except Exception:
+            pass
 
 
 def _login():
@@ -95,3 +132,4 @@ def _supervisor():
 
 def start():
     threading.Thread(target=_supervisor, daemon=True, name="angel-index-feed").start()
+    threading.Thread(target=_flush_loop, daemon=True, name="flush-1s-bars").start()

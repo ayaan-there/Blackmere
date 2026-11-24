@@ -25,7 +25,9 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(HERE))
 
 import core          # noqa: E402
+import structure     # noqa: E402
 import tick_feed     # noqa: E402
+from store import STORE  # noqa: E402
 
 _SNAP: dict[int, tuple[float, dict]] = {}
 _SNAP_TTL = 2
@@ -129,13 +131,37 @@ class Handler(SimpleHTTPRequestHandler):
                         "supabase": "connected" if __import__("store").STORE.enabled else "local",
                         "source": "TODAY · LIVE" if (last.get("ltp") and core.market_open()) else "NO DATA"})
             return
+        if u.path == "/api/structure":
+            samples = STORE.fetch("oi_samples", filters={"day": core.today_str()},
+                                  order="ts.asc")
+            obs = []
+            for i, s in enumerate(samples):
+                prev = samples[i - 1] if i else {}
+                obs.append({"ts": s.get("ts"), "price": s.get("spot"),
+                            "oi": s.get("total_oi"), "price_prev": prev.get("spot"),
+                            "oi_prev": prev.get("total_oi"), "tf": "30s"})
+            self._json({"as_of": core.today_str(),
+                        "single": structure.analyze(obs, tf="30s"),
+                        "timeframes": structure.multi_timeframe(obs)})
+            return
+        if u.path == "/api/bars":
+            q = parse_qs(u.query)
+            try:
+                tf = int(q.get("tf", ["3"])[0])
+            except Exception:
+                tf = 3
+            tf_key = "1s" if tf == 1 else str(tf if tf in core.TFS else 3)
+            rows = STORE.fetch("price_bars", filters={"day": core.today_str(), "tf": tf_key},
+                               order="ts.asc")
+            self._json({"tf": tf, "bars": rows})
+            return
         if u.path == "/api/snapshot":
             q = parse_qs(u.query)
             try:
                 tf = int(q.get("tf", ["3"])[0])
             except Exception:
                 tf = 3
-            if tf not in core.TFS:
+            if tf != 1 and tf not in core.TFS:
                 tf = 3
             try:
                 self._json(get_snapshot(tf))
