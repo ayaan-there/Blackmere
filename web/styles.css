@@ -184,3 +184,41 @@ select{font-family:'IBM Plex Sans',sans-serif;font-size:10px;font-weight:600;col
   .dock{bottom:9px;padding:5px;}
   .dock-btn{min-width:40px;height:34px;padding:0 7px;font-size:10px;}
 }
+/* Phase 5 — fixed single-viewport layout: no page scroll on laptop */
+html, body { height:100%; overflow:hidden; }
+.page { height:100dvh; display:flex; flex-direction:column; overflow:hidden; padding:0; }
+.topbar { flex:0 0 auto; padding:6px 10px; }
+.shell { flex:1 1 auto; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 360px;
+         gap:8px; padding:0 8px 6px; }
+.left, .right { min-height:0; display:flex; flex-direction:column; gap:8px; }
+.left .hero { flex:1 1 auto; min-height:180px; display:flex; flex-direction:column; }
+.hero-head { flex:0 0 auto; }
+.hero-chart { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+#heroChart { flex:1 1 auto; min-height:0; height:100%; width:100%; }
+.axis { flex:0 0 auto; }
+.kpi, .siggrid, .grid3 { flex:0 0 auto; }
+.section-title, .foot { display:none; }
+.right .panel { min-height:0; display:flex; flex-direction:column; padding:8px; }
+.right .panel:first-child { flex:0 0 auto; }
+#breadth { flex:0 0 auto; }
+#flowLog { flex:0 0 232px; min-height:0; overflow-y:auto; }
+#stocks, #sectors, #global { flex:1 1 0; min-height:0; overflow-y:auto; }
+#flowLog table, #stocks table, #sectors table, #global table { border-collapse:collapse; width:100%; font-size:10px; }
+#flowLog th, #flowLog td { height:22px; white-space:nowrap; }
+#flowLog thead th, #stocks thead th, #sectors thead th, #global thead th {
+  position:sticky; top:0; z-index:2; background:var(--panel,#121722);
+}
+#flowLog .panel-head, .panel-head { display:flex; justify-content:space-between; align-items:center; }
+.k.reserved { opacity:.5; outline:1px dashed rgba(140,160,200,.45); border-radius:6px; }
+.norm { font-size:9px; opacity:.6; }
+@media (max-width:1366px) { .shell { grid-template-columns:minmax(0,1fr) 340px; } }
+@media (max-width:1100px) {
+  html, body { overflow:auto; }
+  .page { height:auto; min-height:100dvh; }
+  .shell { grid-template-columns:1fr; }
+  .left .hero { min-height:320px; }
+  #flowLog { flex:0 0 auto; max-height:260px; }
+}
+
+
+#stocks, #sectors, #global { min-height:60px; }

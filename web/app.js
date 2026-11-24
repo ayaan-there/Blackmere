@@ -188,8 +188,8 @@ function openTickFeed(){
 function renderKPI(){
   const r=snap.rows[snap.rows.length-1], idx=snap.index||{};
   if(!r){
-    const labels=['TIME','SPOT','FUTURE','VWAP','DIFF-VWAP','CALL OI','PUT OI','FUT-VWAP','PCR','MARKET','SIGNAL'];
-    $('kpi').innerHTML=labels.map(l=>`<div class="k"><div class="l">${l}</div><div class="v n">—</div></div>`).join('');
+    const labels=['TIME','SPOT','FUTURE','VWAP','DIFF-VWAP','CALL OI','PUT OI','FUT-VWAP','PCR','MARKET','SIGNAL',''];
+    $('kpi').innerHTML=labels.map(l=>`<div class="k${l?'':' reserved'}"><div class="l">${l||'RESERVED'}</div><div class="v n">—</div></div>`).join('');
     $('spot').textContent='—'; $('chg').textContent='—'; $('chg').className='hero-chg';
     $('pivotNote').innerHTML='Awaiting today\'s first real tick';
     return;
@@ -204,7 +204,8 @@ function renderKPI(){
     ['CALL OI',(r.CALL/1e6).toFixed(2)+'M'],['PUT OI',(r.PUT/1e6).toFixed(2)+'M'],
     ['FUT-VWAP',num(r.FUTVWAP)],['PCR',r.PCR.toFixed(2)],
     ['MARKET',mkt,'txt '+(r.PCR>1?'bull':'bear')],
-    ['SIGNAL',r.SIG,'txt '+(r.SIG==='BUY'?'bull':'bear')]
+    ['SIGNAL',r.SIG,'txt '+(r.SIG==='BUY'?'bull':'bear')],
+    ['','—','n reserved']
   ];
   $('kpi').innerHTML=cells.map(([l,v,c])=>`<div class="k"><div class="l">${l}</div><div class="v ${c||''}">${v}</div></div>`).join('');
   $('spot').textContent=f0(idx.spot!=null?idx.spot:r.close);
@@ -242,7 +243,7 @@ function renderCharts(){
 function renderFlow(){
   const data=(snap.rows||[]).slice().reverse();
   if(!data.length){ $('flowLog').innerHTML='<div class="empty">No data yet</div>'; return; }
-  const view=$('rowView').value==='9'?data.slice(0,9):data;
+  const view=data;
   const hs=(snap.hero||[]).map(k=>Number(k.h)).filter(Number.isFinite);
   const ls=(snap.hero||[]).map(k=>Number(k.l)).filter(Number.isFinite);
   const mid=(hs.length&&ls.length)?(Math.max(...hs)+Math.min(...ls))/2:null;
@@ -292,7 +293,6 @@ function setTimeframe(m){
 document.querySelector('.dock').addEventListener('click',e=>{
   const b=e.target.closest('.dock-btn[data-min]'); if(b) setTimeframe(+b.dataset.min);
 });
-$('rowView').addEventListener('change',()=>{ if(snap) renderFlow(); });
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   $('themeBtn').textContent=t==='light'?'☀':'☾';
