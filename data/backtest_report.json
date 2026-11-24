@@ -1,0 +1,244 @@
+{
+  "meta": {
+    "bars": 22310,
+    "signals_sampled": 7407,
+    "days_loaded": 300,
+    "step": 3,
+    "bar_minutes": 5,
+    "threshold_pct": 0.1,
+    "note": "in-sample observed frequencies; costs/slippage excluded; overlapping forward windows. Not a forecast."
+  },
+  "bias": {
+    "BULLISH": {
+      "n": 3524,
+      "up_5": {
+        "n": 3524,
+        "hit_pct": 19.7,
+        "mean_pct": 0.005
+      },
+      "up_15": {
+        "n": 3524,
+        "hit_pct": 33.3,
+        "mean_pct": 0.019
+      }
+    },
+    "BEARISH": {
+      "n": 3381,
+      "down_5": {
+        "n": 3381,
+        "hit_pct": 22.9,
+        "mean_pct": 0.005
+      },
+      "down_15": {
+        "n": 3381,
+        "hit_pct": 35.3,
+        "mean_pct": 0.015
+      }
+    },
+    "NEUTRAL": {
+      "n": 502
+    }
+  },
+  "high_confidence": {
+    "BULLISH": {
+      "n": 2952,
+      "hit_pct": 19.0,
+      "mean_pct": 0.004
+    },
+    "BULLISH_15": {
+      "n": 2952,
+      "hit_pct": 33.1,
+      "mean_pct": 0.018
+    },
+    "BEARISH": {
+      "n": 2875,
+      "hit_pct": 22.8,
+      "mean_pct": 0.008
+    },
+    "BEARISH_15": {
+      "n": 2875,
+      "hit_pct": 35.6,
+      "mean_pct": 0.022
+    }
+  },
+  "patterns": {
+    "BULL MARUBOZU": {
+      "n": 102,
+      "up_5": {
+        "n": 102,
+        "hit_pct": 13.7,
+        "mean_pct": -0.01
+      },
+      "down_5": {
+        "n": 102,
+        "hit_pct": 28.4,
+        "mean_pct": 0.01
+      },
+      "up_15": {
+        "n": 102,
+        "hit_pct": 27.5,
+        "mean_pct": -0.025
+      }
+    },
+    "BULL ENGULFING": {
+      "n": 285,
+      "up_5": {
+        "n": 285,
+        "hit_pct": 17.2,
+        "mean_pct": -0.023
+      },
+      "down_5": {
+        "n": 285,
+        "hit_pct": 22.5,
+        "mean_pct": 0.023
+      },
+      "up_15": {
+        "n": 285,
+        "hit_pct": 33.3,
+        "mean_pct": -0.023
+      }
+    },
+    "DOJI": {
+      "n": 555,
+      "up_5": {
+        "n": 555,
+        "hit_pct": 17.7,
+        "mean_pct": -0.001
+      },
+      "down_5": {
+        "n": 555,
+        "hit_pct": 18.9,
+        "mean_pct": 0.001
+      },
+      "up_15": {
+        "n": 555,
+        "hit_pct": 35.1,
+        "mean_pct": 0.022
+      }
+    },
+    "SPINNING TOP": {
+      "n": 2423,
+      "up_5": {
+        "n": 2423,
+        "hit_pct": 19.1,
+        "mean_pct": -0.005
+      },
+      "down_5": {
+        "n": 2423,
+        "hit_pct": 21.5,
+        "mean_pct": 0.005
+      },
+      "up_15": {
+        "n": 2423,
+        "hit_pct": 30.9,
+        "mean_pct": -0.013
+      }
+    },
+    "BEAR MARUBOZU": {
+      "n": 155,
+      "up_5": {
+        "n": 155,
+        "hit_pct": 22.6,
+        "mean_pct": 0.001
+      },
+      "down_5": {
+        "n": 155,
+        "hit_pct": 22.6,
+        "mean_pct": -0.001
+      },
+      "up_15": {
+        "n": 155,
+        "hit_pct": 31.6,
+        "mean_pct": -0.011
+      }
+    },
+    "BEAR ENGULFING": {
+      "n": 398,
+      "up_5": {
+        "n": 398,
+        "hit_pct": 19.8,
+        "mean_pct": -0.006
+      },
+      "down_5": {
+        "n": 398,
+        "hit_pct": 22.1,
+        "mean_pct": 0.006
+      },
+      "up_15": {
+        "n": 398,
+        "hit_pct": 34.7,
+        "mean_pct": 0.011
+      }
+    },
+    "INSIDE BAR": {
+      "n": 624,
+      "up_5": {
+        "n": 624,
+        "hit_pct": 25.5,
+        "mean_pct": 0.011
+      },
+      "down_5": {
+        "n": 624,
+        "hit_pct": 20.4,
+        "mean_pct": -0.011
+      },
+      "up_15": {
+        "n": 624,
+        "hit_pct": 34.8,
+        "mean_pct": 0.005
+      }
+    },
+    "NORMAL": {
+      "n": 2857,
+      "up_5": {
+        "n": 2857,
+        "hit_pct": 20.8,
+        "mean_pct": 0.007
+      },
+      "down_5": {
+        "n": 2857,
+        "hit_pct": 20.7,
+        "mean_pct": -0.007
+      },
+      "up_15": {
+        "n": 2857,
+        "hit_pct": 32.3,
+        "mean_pct": 0.013
+      }
+    }
+  },
+  "pattern_plus_bias": {
+    "BULL MARUBOZU + BULLISH": {
+      "n": 76,
+      "hit_5": {
+        "n": 76,
+        "hit_pct": 13.2,
+        "mean_pct": -0.008
+      }
+    },
+    "BULL ENGULFING + BULLISH": {
+      "n": 182,
+      "hit_5": {
+        "n": 182,
+        "hit_pct": 17.0,
+        "mean_pct": -0.009
+      }
+    },
+    "BEAR MARUBOZU + BEARISH": {
+      "n": 119,
+      "hit_5": {
+        "n": 119,
+        "hit_pct": 24.4,
+        "mean_pct": 0.008
+      }
+    },
+    "BEAR ENGULFING + BEARISH": {
+      "n": 230,
+      "hit_5": {
+        "n": 230,
+        "hit_pct": 21.3,
+        "mean_pct": -0.004
+      }
+    }
+  }
+}

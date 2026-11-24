@@ -1,0 +1,234 @@
+{
+  "day": "2026-11-19",
+  "expiry": "01-DEC-2026",
+  "pivot_source": "2026-11-13 (last available session before 19 Nov; 18 Nov data missing)",
+  "strikes": 11,
+  "option_files": 22,
+  "pivot_variant": {
+    "signals": 1,
+    "wins": 1,
+    "win_pct": 100.0,
+    "avg_pnl": 40.0,
+    "total_pnl": 40.0,
+    "target_hits": 1,
+    "sl_hits": 0,
+    "trades": [
+      {
+        "time": "2026-11-19 09:50:00",
+        "side": "CE",
+        "strike": 25250,
+        "spot": 25261.2,
+        "entry": 268.55,
+        "sl": 248.55,
+        "target": 308.55,
+        "exit": 308.55,
+        "result": "TARGET",
+        "pnl": 40.0
+      }
+    ]
+  },
+  "oi_levels_variant": {
+    "signals": 0,
+    "wins": 0,
+    "win_pct": 0,
+    "avg_pnl": 0,
+    "total_pnl": 0,
+    "target_hits": 0,
+    "sl_hits": 0,
+    "trades": []
+  },
+  "oi_levels_sample": [
+    {
+      "time": "2026-11-19 09:20:00",
+      "support": 25000,
+      "resistance": 25250,
+      "spot": 25162.05
+    },
+    {
+      "time": "2026-11-19 09:25:00",
+      "support": 25000,
+      "resistance": 25150,
+      "spot": 25116.2
+    },
+    {
+      "time": "2026-11-19 09:30:00",
+      "support": 25000,
+      "resistance": 25150,
+      "spot": 25141.7
+    },
+    {
+      "time": "2026-11-19 09:35:00",
+      "support": 25000,
+      "resistance": 25250,
+      "spot": 25183.7
+    },
+    {
+      "time": "2026-11-19 09:40:00",
+      "support": 25000,
+      "resistance": 25250,
+      "spot": 25224.8
+    },
+    {
+      "time": "2026-11-19 10:25:00",
+      "support": 25000,
+      "resistance": 25250,
+      "spot": 25248.45
+    }
+  ],
+  "chain_10am": [
+    {
+      "strike": 24750,
+      "side": "CE",
+      "oi": 5655,
+      "iv": null,
+      "price": 614.9
+    },
+    {
+      "strike": 24750,
+      "side": "PE",
+      "oi": 149825,
+      "iv": null,
+      "price": 73.75
+    },
+    {
+      "strike": 24800,
+      "side": "CE",
+      "oi": 105885,
+      "iv": null,
+      "price": 572.85
+    },
+    {
+      "strike": 24800,
+      "side": "PE",
+      "oi": 619840,
+      "iv": null,
+      "price": 83.35
+    },
+    {
+      "strike": 24850,
+      "side": "CE",
+      "oi": 26000,
+      "iv": null,
+      "price": 565.8
+    },
+    {
+      "strike": 24850,
+      "side": "PE",
+      "oi": 113555,
+      "iv": null,
+      "price": 93.6
+    },
+    {
+      "strike": 24900,
+      "side": "CE",
+      "oi": 695240,
+      "iv": null,
+      "price": 494.4
+    },
+    {
+      "strike": 24900,
+      "side": "PE",
+      "oi": 542815,
+      "iv": null,
+      "price": 106.15
+    },
+    {
+      "strike": 24950,
+      "side": "CE",
+      "oi": 16575,
+      "iv": null,
+      "price": 469.15
+    },
+    {
+      "strike": 24950,
+      "side": "PE",
+      "oi": 76570,
+      "iv": null,
+      "price": 118.3
+    },
+    {
+      "strike": 25000,
+      "side": "CE",
+      "oi": 981305,
+      "iv": null,
+      "price": 423.3
+    },
+    {
+      "strike": 25000,
+      "side": "PE",
+      "oi": 1383590,
+      "iv": null,
+      "price": 132.95
+    },
+    {
+      "strike": 25050,
+      "side": "CE",
+      "oi": 39065,
+      "iv": null,
+      "price": 388.5
+    },
+    {
+      "strike": 25050,
+      "side": "PE",
+      "oi": 105105,
+      "iv": null,
+      "price": 148.75
+    },
+    {
+      "strike": 25100,
+      "side": "CE",
+      "oi": 208585,
+      "iv": null,
+      "price": 357.85
+    },
+    {
+      "strike": 25100,
+      "side": "PE",
+      "oi": 396955,
+      "iv": null,
+      "price": 167.15
+    },
+    {
+      "strike": 25150,
+      "side": "CE",
+      "oi": 94120,
+      "iv": null,
+      "price": 327.25
+    },
+    {
+      "strike": 25150,
+      "side": "PE",
+      "oi": 139360,
+      "iv": null,
+      "price": 185.45
+    },
+    {
+      "strike": 25200,
+      "side": "CE",
+      "oi": 623610,
+      "iv": null,
+      "price": 297.7
+    },
+    {
+      "strike": 25200,
+      "side": "PE",
+      "oi": 981435,
+      "iv": null,
+      "price": 207.45
+    },
+    {
+      "strike": 25250,
+      "side": "CE",
+      "oi": 179530,
+      "iv": null,
+      "price": 270.0
+    },
+    {
+      "strike": 25250,
+      "side": "PE",
+      "oi": 161005,
+      "iv": null,
+      "price": 228.6
+    }
+  ]
+}
