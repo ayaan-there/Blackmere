@@ -196,17 +196,13 @@ function renderKPI(){
     $('kpi').innerHTML=labels.map(l=>`<div class="k${l?'':' reserved'}"><div class="l">${l||'RESERVED'}</div><div class="v n">—</div></div>`).join('');
     $('spot').textContent='—'; $('chg').textContent='—'; $('chg').className='hero-chg';
     $('pivotNote').innerHTML='Awaiting today\'s first real tick';
-    if($('mktStruct')) $('mktStruct').textContent='—';
-    if($('algoSig')) $('algoSig').textContent='—';
     return;
   }
   const st=snap.structure&&snap.structure.single&&snap.structure.single.current;
   const smap={'LONG BUILDUP':'LONG BLD','SHORT BUILDUP':'SHORT BLD',
               'LONG UNWINDING':'LONG UNW','SHORT COVERING':'SHORT COV'};
   const mkt=st&&st.state?(smap[st.state]||'MIXED'):(r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING');
-  const strength=snap.structure&&snap.structure.behaviour&&snap.structure.behaviour.strength_score||0;
-  if($('mktStruct')) $('mktStruct').textContent=st&&st.state?st.state:(r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING');
-  if($('algoSig')) $('algoSig').textContent=(strength>=50?'STRONG ':'')+(r.SIG==='BUY'?'BUY':'SELL');
+  const strength=snap.structure&&snap.structure.single&&snap.structure.single.behaviour&&snap.structure.single.behaviour.strength_score||0;
   const cells=[
     ['TIME',r.ts],['SPOT',f0(idx.spot!=null?idx.spot:r.close),idx.chg>=0?'g':'r'],
     ['FUTURE',f0(r.FUTURE)],['VWAP',f0(r.VWAP)],['DIFF-VWAP',num(r.close-r.VWAP)],
@@ -228,19 +224,20 @@ function renderSignals(){
   const r=snap.rows[snap.rows.length-1], m=snap.most_active||{}, b=snap.breadth||[];
   if(!r){
     const cards=[['s1','↕','MOST ACTIVE OI'],['s2','%','PUT/CALL SENTIMENT'],
-                 ['s3','↗','MARKET A/D'],['s4','◎','GIFT NIFTY']];
+                 ['s3','↗','MARKET STRUCTURE'],['s4','◎','ALGORITHMIC SIGNAL']];
     $('signalCards').innerHTML=cards.map(([cls,ic,label])=>
       `<div class="sig ${cls}"><div class="sig-top"><span class="sig-label">${label}</span>
        <span class="sig-icon">${ic}</span></div><div class="sig-value n">—</div><div class="sig-sub">Awaiting data</div></div>`).join('');
     return; }
-  const g=(snap.global||[]).find(x=>x[0]==='GIFT NIFTY');
-  const ratio=(b[0]&&b[1])?((b[1][1]||0)/(b[1][2]||1)):null;
+  const st=snap.structure&&snap.structure.single&&snap.structure.single.current;
+  const strength=snap.structure&&snap.structure.single&&snap.structure.single.behaviour&&snap.structure.single.behaviour.strength_score||0;
+  const state=st&&st.state?st.state:(r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING');
   const cards=[
     ['s1','↕','MOST ACTIVE OI',esc(m.result||'—'),`CE ${(m.ce||[]).length} · PE ${(m.pe||[]).length}`,'A'],
     ['s2','%','PCR / SIGNAL',r.PCR.toFixed(2),`${r.SIG} · ${r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING'}`,'P'],
-    ['s3','↗','WHOLE MARKET A/D',ratio!=null?ratio.toFixed(2):'—',
-      `${b[1]&&b[1][1]!=null?f0(b[1][1]):'—'} adv / ${b[1]&&b[1][2]!=null?f0(b[1][2]):'—'} dec`,'B'],
-    ['s4','◎','GIFT NIFTY',g&&g[1]!=null?f0(g[1]):'—',g&&g[2]!=null?sg(g[2]):'—','G']
+    ['s3','↗','MARKET STRUCTURE',state,`strength ${strength||'—'}${st?' · '+st.price_change_pct.toFixed(3)+'%':''}`,'B'],
+    ['s4','◎','ALGORITHMIC SIGNAL',(strength>=50?'STRONG ':'')+(r.SIG==='BUY'?'BUY':'SELL'),
+      `PCR ${r.PCR.toFixed(2)} · ${r.PCR>1?'LONG BUILD-UP':'LONG UNWINDING'}`,'G']
   ];
   $('signalCards').innerHTML=cards.map(([cls,ic,label,value,sub,mark])=>
     `<div class="sig ${cls}" data-mark="${mark}"><div class="sig-top"><span class="sig-label">${label}</span>

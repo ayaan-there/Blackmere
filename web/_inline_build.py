@@ -9,10 +9,13 @@ html = (HERE / 'index.html').read_text(encoding='utf-8')
 # make idempotent: restore placeholders from a previously inlined build
 html = re.sub(r'<style>.*?</style>', '<link rel="stylesheet" href="styles.css">',
               html, count=1, flags=re.S)
-html = re.sub(r'<script>.*?</script>',
-              '<script src="vendor/lightweight-charts.js" data-inline="vendor"></script>\n'
-              '<script src="app.js" data-inline="app"></script>',
-              html, count=1, flags=re.S)
+# Collapse ALL previously inlined script blocks into one vendor/app pair.
+# (Older builds only replaced the first block, so repeated builds stacked copies.)
+parts = re.split(r'<script(?:\s[^>]*)?>.*?</script>', html, flags=re.S)
+html = (parts[0]
+        + '<script src="vendor/lightweight-charts.js" data-inline="vendor"></script>\n'
+          '<script src="app.js" data-inline="app"></script>'
+        + parts[-1])
 css = (HERE / 'styles.css').read_text(encoding='utf-8')
 fonts = (HERE / 'fonts.css').read_text(encoding='utf-8')
 js = (HERE / 'app.js').read_text(encoding='utf-8')
