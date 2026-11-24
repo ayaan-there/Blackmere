@@ -2,6 +2,7 @@
 @import url('fonts.css');
 
 :root{
+  --fs:1;
   --bg:#0A0B0E; --card:#14161D; --card-hover:#1A1D26; --elevated:#1D202A;
   --border:rgba(255,255,255,.08); --subtle:rgba(255,255,255,.04);
   --green:#30D158; --red:#FF453A; --blue:#0A84FF; --orange:#FF9F0A;
@@ -25,7 +26,7 @@ html[data-theme="light"]{
 }
 *{box-sizing:border-box}
 html,body{height:100%;max-height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);
-  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12px;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:calc(12px*var(--fs));
   font-feature-settings:"cv02","cv03","cv04","cv11","tnum";-webkit-font-smoothing:antialiased;
   user-select:none;}
 button{font:inherit;color:inherit}
@@ -46,10 +47,10 @@ button{font:inherit;color:inherit}
 .sep{height:14px;width:1px;background:var(--border)}
 .brand-icon{width:16px;height:16px;border-radius:4px;border:1px solid color-mix(in srgb,var(--blue) 50%,transparent);
   background:color-mix(in srgb,var(--blue) 20%,transparent);display:flex;align-items:center;justify-content:center;
-  color:var(--blue);font-size:9px;font-weight:700}
+  color:var(--blue);font-size:calc(9px*var(--fs));font-weight:700}
 .brand{font-weight:600;font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--text)}
-.topline{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text-2)}
-.status{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.04em;
+.topline{display:flex;align-items:center;gap:8px;font-size:calc(10px*var(--fs));color:var(--text-2)}
+.status{font-family:'JetBrains Mono',monospace;font-size:calc(10px*var(--fs));font-weight:600;letter-spacing:.04em;
   padding:2px 8px;border-radius:999px;border:1px solid color-mix(in srgb,var(--green) 22%,transparent);
   background:color-mix(in srgb,var(--green) 10%,transparent);color:var(--green)}
 .status.rec,.status.err{color:var(--orange);border-color:color-mix(in srgb,var(--orange) 25%,transparent);
@@ -66,75 +67,75 @@ button{font:inherit;color:inherit}
 /* ---------- hero ---------- */
 .hero{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:12px;position:relative;overflow:hidden}
 .hero-head{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:12px}
-.hero-kicker{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
+.hero-kicker{font-size:calc(11px*var(--fs));font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
 .hero-sep{color:var(--text-3);margin:0 4px}
 .hero-value{display:flex;align-items:baseline;gap:10px;margin-top:2px}
-#spot{font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:1.05;color:var(--text)}
-.hero-chg{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--green)}
+#spot{font-size:calc(28px*var(--fs));font-weight:700;letter-spacing:-.03em;line-height:1.05;color:var(--text)}
+.hero-chg{font-family:'JetBrains Mono',monospace;font-size:calc(12px*var(--fs));font-weight:600;color:var(--green)}
 .hero-pill,.struct-chips{flex:0 0 auto;display:flex;gap:8px;align-items:center}
-.hero-pill{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;
+.hero-pill{font-family:'JetBrains Mono',monospace;font-size:calc(10px*var(--fs));font-weight:600;letter-spacing:.06em;
   padding:5px 10px;border-radius:999px;background:var(--subtle);border:1px solid var(--border);color:var(--text-2)}
 .struct-chip{background:var(--subtle);border:1px solid var(--border);border-radius:8px;padding:5px 9px;min-width:92px;text-align:center}
-.struct-chip .l{font-size:8px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3)}
-.struct-chip .v{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;margin-top:2px;color:var(--text)}
+.struct-chip .l{font-size:calc(8px*var(--fs));font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3)}
+.struct-chip .v{font-family:'JetBrains Mono',monospace;font-size:calc(10px*var(--fs));font-weight:600;margin-top:2px;color:var(--text)}
 .hero-chart{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative}
-.legend{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text-2);margin-bottom:4px}
+.legend{display:flex;justify-content:space-between;align-items:center;font-size:calc(10px*var(--fs));color:var(--text-2);margin-bottom:4px}
 .legend i.l1,.legend i.l2{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--teal);margin-right:5px}
 .legend i.l2{border-radius:0;height:0;width:12px;border-top:2px dotted var(--teal)}
-.norm{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-3)}
-.hero-meta{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;
+.norm{font-size:calc(9px*var(--fs));font-family:'JetBrains Mono',monospace;color:var(--text-3)}
+.hero-meta{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:calc(9px*var(--fs));
   color:var(--text-3);padding:2px 0 4px}
 #heroChart{flex:1 1 auto;min-height:0;width:100%;height:100%;position:relative}
 .axis{flex:0 0 auto;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;
-  font-size:9px;color:var(--text-3);padding-top:3px}
+  font-size:calc(9px*var(--fs));color:var(--text-3);padding-top:3px}
 .tv-tip{position:absolute;z-index:20;display:none;pointer-events:none;padding:7px 9px;border-radius:8px;
   background:var(--elevated);border:1px solid var(--border);color:var(--text);
-  font:10px/1.5 'JetBrains Mono',monospace;white-space:nowrap;box-shadow:var(--shadow)}
+  font:calc(10px*var(--fs))/1.5 'JetBrains Mono',monospace;white-space:nowrap;box-shadow:var(--shadow)}
 
 /* ---------- KPI pill strip (dense, right-aligned) ---------- */
 .kpi{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .k{background:var(--subtle);border:1px solid var(--border);border-radius:6px;padding:4px 8px;
   min-width:64px;text-align:right}
-.k .l{font-size:8px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);white-space:nowrap}
-.k .v{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text);margin-top:1px;white-space:nowrap}
+.k .l{font-size:calc(8px*var(--fs));font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);white-space:nowrap}
+.k .v{font-family:'JetBrains Mono',monospace;font-size:calc(11px*var(--fs));font-weight:600;color:var(--text);margin-top:1px;white-space:nowrap}
 .k.reserved{opacity:.45;border-style:dashed}
 
 /* ---------- signal cards ---------- */
 .siggrid{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .sig{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:7px 10px;min-width:0}
 .sig-top{display:flex;justify-content:space-between;align-items:center}
-.sig-label{font-size:8px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);
+.sig-label{font-size:calc(8px*var(--fs));font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sig-icon{font-size:10px;color:var(--blue)}
-.sig-value{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;margin-top:2px;color:var(--text)}
-.sig-sub{font-size:9px;color:var(--text-2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sig-icon{font-size:calc(10px*var(--fs));color:var(--blue)}
+.sig-value{font-family:'JetBrains Mono',monospace;font-size:calc(15px*var(--fs));font-weight:600;margin-top:2px;color:var(--text)}
+.sig-sub{font-size:calc(9px*var(--fs));color:var(--text-2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- mini charts ---------- */
 .grid3{flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .panel.chart-panel{padding:7px 9px;min-width:0}
-.chart-title{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2);margin-bottom:3px}
+.chart-title{font-size:calc(9px*var(--fs));font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2);margin-bottom:3px}
 .chart{display:block;width:100%;height:84px}
-.pivot-note{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-2);margin-top:2px}
+.pivot-note{font-family:'JetBrains Mono',monospace;font-size:calc(9px*var(--fs));color:var(--text-2);margin-top:2px}
 
 /* ---------- right column ---------- */
 .right .panel{min-height:0;display:flex;flex-direction:column;padding:8px 10px}
 .right .panel:first-child{flex:0 0 auto}
 .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:8px}
-.panel-head h3,.panel-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+.panel-head h3,.panel-title{font-size:calc(9px*var(--fs));font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   color:var(--text-2);margin:0 0 4px;white-space:nowrap}
 .panel-head h3{margin:0}
 #breadth{flex:0 0 auto}
 #flowLog{flex:0 0 232px;min-height:0;overflow-y:auto}
 #stocks,#sectors,#global{flex:1 1 0;min-height:60px;overflow-y:auto}
-.right table,#flowLog table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:9px}
+.right table,#flowLog table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:calc(9px*var(--fs))}
 .right th,#flowLog th{position:sticky;top:0;z-index:2;background:var(--card);color:var(--text-3);
-  font-family:'Inter',sans-serif;font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  font-family:'Inter',sans-serif;font-size:calc(8px*var(--fs));font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   text-align:right;padding:2px 4px;border-bottom:1px solid var(--border);white-space:nowrap}
 .right td,#flowLog td{text-align:right;padding:1px 4px;height:20px;color:var(--text-2);
   border-bottom:1px solid var(--subtle);white-space:nowrap}
 .right td:first-child,#flowLog td:first-child{text-align:left;color:var(--text);font-weight:600}
 .right tr:hover td,#flowLog tr:hover td{background:var(--subtle)}
-.empty,.errbox{padding:12px;color:var(--text-3);font-size:11px;text-align:center}
+.empty,.errbox{padding:12px;color:var(--text-3);font-size:calc(11px*var(--fs));text-align:center}
 
 /* thin scrollbars */
 *::-webkit-scrollbar{width:4px;height:4px}
@@ -146,7 +147,7 @@ button{font:inherit;color:inherit}
 .dock{position:fixed;right:12px;bottom:10px;z-index:40;display:flex;gap:4px;align-items:center}
 .dock-btn{min-width:32px;height:26px;padding:0 9px;border-radius:8px;border:1px solid transparent;
   background:var(--glass);backdrop-filter:blur(12px);color:var(--text-2);
-  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;cursor:pointer}
+  font-family:'JetBrains Mono',monospace;font-size:calc(9px*var(--fs));font-weight:600;cursor:pointer}
 .dock-btn:hover{background:var(--card-hover);color:var(--text)}
 .dock-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 .dock-btn.round{min-width:26px;width:26px;border-radius:50%;padding:0}
@@ -168,18 +169,18 @@ button{font:inherit;color:inherit}
 [hidden]{display:none!important}
 .table-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
 .tabs-mini{display:flex;gap:4px}
-.tabs-mini .tab{background:transparent;border:1px solid transparent;border-radius:6px;padding:2px 8px;color:var(--text-3);font:600 9px/1.4 'JetBrains Mono',monospace;letter-spacing:.05em;cursor:pointer}
+.tabs-mini .tab{background:transparent;border:1px solid transparent;border-radius:6px;padding:2px 8px;color:var(--text-3);font:600 calc(9px*var(--fs))/1.4 'JetBrains Mono',monospace;letter-spacing:.05em;cursor:pointer}
 .tabs-mini .tab:hover{color:var(--text)}
 .tabs-mini .tab.active{background:var(--subtle);border-color:var(--border);color:var(--text)}
 .tabbody{flex:1 1 auto;min-height:0;overflow-y:auto}
 
 
 #flowLog{flex:0 0 198px}
-#flowLog table{font-size:8px}
+#flowLog table{font-size:calc(8px*var(--fs))}
 #flowLog th,#flowLog td{padding:1px 2px;height:20px}
 
 
-#flowLog table{font-size:7px}
+#flowLog table{font-size:calc(7px*var(--fs))}
 #flowLog th,#flowLog td{padding:1px 1px}
 
 
@@ -187,38 +188,38 @@ button{font:inherit;color:inherit}
 
 
 /* Comfortable type scale (no page scroll) */
-body{font-size:13px}
+body{font-size:calc(13px*var(--fs))}
 .shell{grid-template-columns:repeat(8,minmax(0,1fr)) 470px}
 .left{grid-column:1 / span 8}
 .right{grid-column:9 / span 1}
 .brand{font-size:12px}
-.topline{font-size:11px;gap:10px}
-.status{font-size:11px;padding:3px 9px}
-.hero-kicker{font-size:12px}
-#spot{font-size:30px}
-.hero-chg{font-size:13px}
-.hero-meta{font-size:10px}
-.axis{font-size:10px}
+.topline{font-size:calc(11px*var(--fs));gap:10px}
+.status{font-size:calc(11px*var(--fs));padding:3px 9px}
+.hero-kicker{font-size:calc(12px*var(--fs))}
+#spot{font-size:calc(30px*var(--fs))}
+.hero-chg{font-size:calc(13px*var(--fs))}
+.hero-meta{font-size:calc(10px*var(--fs))}
+.axis{font-size:calc(10px*var(--fs))}
 .k{min-width:70px;padding:5px 9px}
-.k .l{font-size:9px}
-.k .v{font-size:12px}
+.k .l{font-size:calc(9px*var(--fs))}
+.k .v{font-size:calc(12px*var(--fs))}
 .struct-chip{min-width:104px;padding:6px 10px}
-.struct-chip .l{font-size:9px}
-.struct-chip .v{font-size:11px}
-.panel-head h3,.panel-title{font-size:10px}
-.sig-label{font-size:9px}
-.sig-value{font-size:16px}
-.sig-sub{font-size:10px}
-.chart-title{font-size:10px}
-.pivot-note{font-size:10px}
-.tabs-mini .tab{font-size:10px;padding:3px 9px}
-.norm{font-size:10px}
-#flowLog table{font-size:8px}
+.struct-chip .l{font-size:calc(9px*var(--fs))}
+.struct-chip .v{font-size:calc(11px*var(--fs))}
+.panel-head h3,.panel-title{font-size:calc(10px*var(--fs))}
+.sig-label{font-size:calc(9px*var(--fs))}
+.sig-value{font-size:calc(16px*var(--fs))}
+.sig-sub{font-size:calc(10px*var(--fs))}
+.chart-title{font-size:calc(10px*var(--fs))}
+.pivot-note{font-size:calc(10px*var(--fs))}
+.tabs-mini .tab{font-size:calc(10px*var(--fs));padding:3px 9px}
+.norm{font-size:calc(10px*var(--fs))}
+#flowLog table{font-size:calc(8px*var(--fs))}
 #flowLog th,#flowLog td{padding:1px 2px;height:21px}
-.right table{font-size:10px}
-.right th{font-size:9px}
+.right table{font-size:calc(10px*var(--fs))}
+.right th{font-size:calc(9px*var(--fs))}
 .right td{height:22px}
-.dock-btn{font-size:10px;height:28px;min-width:34px}
+.dock-btn{font-size:calc(10px*var(--fs));height:28px;min-width:34px}
 .dock-btn.round{min-width:28px;width:28px}
 
 #flowLog{flex:0 0 220px}
@@ -226,3 +227,11 @@ body{font-size:13px}
 .kpi{gap:4px}
 .k{min-width:60px;padding:4px 6px}
 
+
+/* UI text-size control (excludes TradingView canvas + wordmark) */
+.font-ctrl{display:flex;align-items:center;gap:2px;padding:1px 3px;border-radius:999px;
+  border:1px solid var(--border);background:var(--subtle)}
+.font-ctrl button{width:18px;height:16px;padding:0;border:none;border-radius:999px;background:transparent;
+  color:var(--text-2);font:600 11px/1 'JetBrains Mono',monospace;cursor:pointer}
+.font-ctrl button:hover{background:var(--card-hover);color:var(--text)}
+.font-ctrl span{font:600 9px/1 'JetBrains Mono',monospace;color:var(--text-3);min-width:28px;text-align:center}

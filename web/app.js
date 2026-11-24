@@ -310,6 +310,23 @@ document.querySelector('.tabs-mini').addEventListener('click',e=>{
   document.querySelectorAll('.tabs-mini .tab').forEach(x=>x.classList.toggle('active',x===b));
   ['stocks','sectors','global'].forEach(id=>{ const el=$(id); if(el) el.hidden=(id!==b.dataset.tab); });
 });
+/* UI text scale — chart canvas and the AXIOM BLACKMERE wordmark stay fixed */
+const FONT_STEPS=[0.9,1,1.1,1.2];
+let fontIdx=1;
+function applyFontScale(){
+  document.documentElement.style.setProperty('--fs',FONT_STEPS[fontIdx]);
+  if($('fontLabel')) $('fontLabel').textContent=Math.round(FONT_STEPS[fontIdx]*100)+'%';
+  try{localStorage.setItem('nifty-font-idx',fontIdx);}catch(e){}
+}
+if($('fontDown')) $('fontDown').addEventListener('click',()=>{
+  fontIdx=Math.max(0,fontIdx-1); applyFontScale();
+});
+if($('fontUp')) $('fontUp').addEventListener('click',()=>{
+  fontIdx=Math.min(FONT_STEPS.length-1,fontIdx+1); applyFontScale();
+});
+fontIdx=(()=>{try{const s=localStorage.getItem('nifty-font-idx');if(s===null)return 1;const v=+s;return (v>=0&&v<FONT_STEPS.length)?v:1;}catch(e){return 1;}})();
+applyFontScale();
+
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   $('themeBtn').textContent=t==='light'?'☀':'☾';
