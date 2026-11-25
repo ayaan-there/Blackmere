@@ -156,7 +156,7 @@ def _tf_key(tf: int) -> str:
 
 def _bars_for(tf: int) -> list:
     return STORE.fetch("price_bars", filters={"day": today_str(), "tf": _tf_key(tf)},
-                       order="ts.asc")
+                       order="ts.asc", limit=100000)
 
 
 def previous_session() -> dict | None:
@@ -198,7 +198,7 @@ def indicators(tf: int) -> dict:
     """VWAP from today's real 1m bars; pivot from the last prior trading day."""
     bars = _bars_for(tf)
     m1 = STORE.fetch("price_bars", filters={"day": today_str(), "tf": "1m"},
-                     order="ts.asc")
+                     order="ts.asc", limit=100000)
     m1 = sorted(m1, key=lambda b: str(b.get("ts", "")))
     points, cum, count, ptr = [], 0.0, 0, 0
     for b in bars:

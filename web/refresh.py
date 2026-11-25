@@ -73,7 +73,7 @@ def _rows_loop():
                 # every timeframe so no chart depends on the REST candle call.
                 ones = STORE.fetch("price_bars",
                                    filters={"day": core.today_str(), "tf": "1s"},
-                                   order="ts.asc")
+                                   order="ts.asc", limit=100000)
                 if ones:
                     src = [{"t": str(b.get("ts", ""))[11:19], "o": b.get("o"),
                             "h": b.get("h"), "l": b.get("l"), "c": b.get("c")} for b in ones]
