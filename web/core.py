@@ -216,13 +216,16 @@ def indicators(tf: int) -> dict:
 
 
 def today_bars(tf: int) -> list:
-    """Real 1-min bars of TODAY only; older days are never returned."""
-    day = today_str()
-    try:
-        bars = data_loader.fetch_index_candles(tf, ttl=TTL["bars"]) or []
-    except Exception:
-        bars = []
-    return [b for b in bars if b.get("d") == day]
+    """Real bars of TODAY from the store (built from 1s ticks), never REST."""
+    out = []
+    for r in _bars_for(tf):
+        ts = str(r.get("ts", ""))
+        if not ts.startswith(today_str()):
+            continue
+        out.append({"d": ts[:10], "t": ts[11:19], "ts": ts,
+                    "o": _num(r.get("o")), "h": _num(r.get("h")),
+                    "l": _num(r.get("l")), "c": _num(r.get("c"))})
+    return out
 
 
 def today_rows(tf: int) -> list:

@@ -488,6 +488,15 @@ html[data-theme="light"]{--chart-bg:#FFFFFF;--pivot:#AF52DE}
    ============================================================ */
 let currentMin = 3, currentTf = '3', snap = null, pollTimer = null, loading = false;
 function chartTf(){ return currentTf==='1s'?1:(currentTf==='1m'?0:Number(currentTf)); }
+function tfKey(tf){ return tf===1?'1s':(tf===0?'1m':String(tf)); }
+function mapRows(rows){
+  return (rows||[]).map(r=>({
+    ts:String(r.ts||'').slice(11,16), close:+r.close||0, FUTURE:+r.future||0,
+    VWAP:+r.vwap||0, FUTVWAP:+r.fut_vwap||0, CALL:+r.call||0, PUT:+r.put||0,
+    DIFF:+r.diff||0, PCR:+r.pcr||0, STATE:r.state||'FLAT', STATE_C:r.state_c||'n',
+    SIG:r.sig||r.SIG||((+r.pcr||0)>1?'BUY':'SELL')}));
+}
+let bootstrapData=null, rowsByTf={}, indByTf={}, bootstrapLoading=false;
 
 /* ---------- colour overrides (settings + per-card recolor) ---------- */
 const COLOR_KEYS=['bg','card','kpi','text','muted','border','grid','candleUp','candleDown','vwap','pivot','chartBg'];
@@ -533,30 +542,48 @@ const adr = (a,b) => (a!=null && b!=null && Number(b)!==0)
   ? `<span class="${a/b>=1?'g':'r'}">${(a/b).toFixed(2)}</span>` : '<span class="n">—</span>';
 
 /* ---------- data ---------- */
+function updateStatusFromSnap(){
+  if(!snap) return;
+  const empty=!snap.rows||!snap.rows.length;
+  if(empty) setStatus('● NO DATA','rec');
+  else if(String(snap.source||'').startsWith('PREVIEW')) setStatus('● PREVIEW','rec');
+  else if((snap.bar_age_s??0)>600) setStatus('● DELAYED','err');
+  else if(snap.source==='TODAY · LIVE') setStatus('● LIVE','');
+  else setStatus('● NO DATA','rec');
+}
+async function loadBootstrap(silent){
+  if(bootstrapLoading) return;
+  bootstrapLoading=true;
+  try{
+    const d=await fetch('/api/bootstrap',{cache:'no-store'}).then(r=>r.json());
+    if(!d||d.error) throw new Error(d&&d.error||'bootstrap failed');
+    bootstrapData=d;
+    rowsByTf=d.rows_by_tf||{}; indByTf=d.indicators||{};
+    Object.entries(d.bars||{}).forEach(([k,v])=>{barCache[k]=v;});
+    snap=Object.assign({},d.snapshot||{},d.static||{},
+      {structure:d.structure, rows:mapRows(rowsByTf[tfKey(chartTf())])});
+    renderDynamic(); renderStatic();
+    indData=indByTf[tfKey(chartTf())]||{vwap:[]};
+    loadBars(chartTf());
+    updateStatusFromSnap();
+  }catch(e){
+    if(!silent){ setStatus('● OFFLINE','err'); }
+  }finally{ bootstrapLoading=false; }
+}
 async function load(tf){
   if(loading) return;
-  loading = true;
-  setStatus('CONNECTING…','');
+  loading=true;
   try{
-    const res = await fetch(`/api/snapshot?tf=${tf}`,{cache:'no-store'});
-    const data = await res.json();
-    if(!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-    try{ data.structure=await fetch('/api/structure',{cache:'no-store'}).then(x=>x.json()); }catch(_){}
+    if(!bootstrapData){ await loadBootstrap(false); return; }
+    const rows=mapRows(rowsByTf[tfKey(tf)]);
     const statics=snap?{breadth:snap.breadth,stocks:snap.stocks,sectors:snap.sectors,global:snap.global}:{};
-    snap = Object.assign(data, statics);
+    snap=Object.assign({},bootstrapData.snapshot||{},statics,
+      {tf, rows, structure:bootstrapData.structure});
+    indData=indByTf[tfKey(tf)]||{vwap:[]};
     renderDynamic();
-    const live = data.source === 'TODAY · LIVE';
-    const empty = !data.rows || !data.rows.length;
-    const bage = data.bar_age_s ?? 0;
-    if (empty) setStatus('● NO DATA', 'rec');
-    else if (String(data.source).startsWith('PREVIEW')) setStatus('● PREVIEW', 'rec');
-    else if (bage > 600) setStatus('● DELAYED', 'err');
-    else if (live) setStatus('● LIVE', '');
-    else setStatus('● NO DATA', 'rec');
-  }catch(e){
-    setStatus('● OFFLINE','err');
-    $('flowLog').innerHTML = `<div class="errbox">Live data unavailable — ${esc(e.message)}. Retrying automatically…</div>`;
-  }finally{ loading = false; }
+    applyIndicators();
+    updateStatusFromSnap();
+  }finally{ loading=false; }
 }
 function setStatus(t,c){ const el=$('status'); el.textContent=t; el.className='status '+(c||''); }
 
@@ -687,8 +714,12 @@ window.addEventListener('resize',scheduleChartResize);
 if(window.visualViewport) window.visualViewport.addEventListener('resize',scheduleChartResize);
 
 async function loadIndicators(tf){
-  try{ indData=await fetch('/api/indicators?tf='+tf,{cache:'no-store'}).then(r=>r.json()); }
-  catch(_){ indData=null; }
+  const key=tfKey(tf);
+  if(indByTf[key]){ indData=indByTf[key]; }
+  else{
+    try{ indData=await fetch('/api/indicators?tf='+tf,{cache:'no-store'}).then(r=>r.json()); indByTf[key]=indData; }
+    catch(_){ indData=null; }
+  }
   applyIndicators();
 }
 function applyIndicators(){
@@ -739,21 +770,25 @@ async function loadBars(tf){
   if(!tvChart) return;
   chartSecs=(tf===1);
   tvChart.timeScale().applyOptions({secondsVisible:chartSecs});
-  if(!barCache[tf]){
-    try{const d=await fetch('/api/bars?tf='+tf,{cache:'no-store'}).then(r=>r.json());barCache[tf]=d.bars||[];}
-    catch(_){barCache[tf]=[];}
+  const key=tfKey(tf);
+  if(!barCache[key]){
+    try{const d=await fetch('/api/bars?tf='+tf,{cache:'no-store'}).then(r=>r.json());barCache[key]=d.bars||[];}
+    catch(_){barCache[key]=[];}
   }
-  const rows=barCache[tf]||[];
-  if(!rows.length){candleSeries.setData([]);chartBarsArr=[];loadIndicators(tf);return;}
+  const rows=barCache[key]||[];
+  if(!rows.length){ if(chartBarsArr.length){candleSeries.setData([]);chartBarsArr=[];} loadIndicators(tf); return; }
   const data=[];
   for(const r of rows){
     const t=chartTime(r.ts),o=+r.o,h=+r.h,l=+r.l,c=+r.c;
     if(t==null||!isFinite(o)||!isFinite(h)||!isFinite(l)||!isFinite(c))continue;
     data.push({time:t,open:o,high:h,low:l,close:c});
   }
+  const prev=chartBarsArr;
+  const unchanged=prev.length===data.length && prev.length &&
+    prev[prev.length-1].time===data[data.length-1].time &&
+    prev[prev.length-1].close===data[data.length-1].close;
   chartBarsArr=data;
-  candleSeries.setData(data);
-  tvChart.timeScale().fitContent();
+  if(!unchanged){ candleSeries.setData(data); tvChart.timeScale().fitContent(); }
   loadIndicators(tf);
 }
 function renderHero(){
@@ -955,7 +990,7 @@ function setTimeframe(key){
   document.querySelectorAll('.dock-btn[data-min]').forEach(b=>b.classList.toggle('active',b.dataset.min===k));
   load(chartTf());
   if(pollTimer) clearInterval(pollTimer);
-  pollTimer=setInterval(()=>load(chartTf()),60000);
+  pollTimer=setInterval(()=>loadBootstrap(true),60000);
   openTickFeed();
 }
 document.querySelector('.dock').addEventListener('click',e=>{
@@ -1169,8 +1204,7 @@ $('themeBtn').addEventListener('click',()=>{
 });
 applyTheme((()=>{try{return localStorage.getItem('nifty-theme')||'light';}catch(e){return 'light';}})());
 setTimeframe(3);
-loadStatic();
-if(!staticTimer) staticTimer=setInterval(loadStatic,10000);
+loadBootstrap(false);
 
 </script>
 </body>

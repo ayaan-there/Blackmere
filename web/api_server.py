@@ -46,6 +46,32 @@ def get_snapshot(tf: int) -> dict:
     return payload
 
 
+def structure_payload():
+    samples = STORE.fetch("oi_samples", filters={"day": core.today_str()}, order="ts.asc")
+    obs = []
+    for i, s in enumerate(samples):
+        prev = samples[i - 1] if i else {}
+        obs.append({"ts": s.get("ts"), "price": s.get("spot"),
+                    "oi": s.get("total_oi"), "price_prev": prev.get("spot"),
+                    "oi_prev": prev.get("total_oi"), "tf": "30s"})
+    return {"as_of": core.today_str(),
+            "single": structure.analyze(obs, tf="30s"),
+            "timeframes": structure.multi_timeframe(obs)}
+
+
+def bootstrap_payload():
+    all_tf = (0, 1) + core.TFS
+    snap = get_snapshot(3)
+    return {
+        "snapshot": snap,
+        "bars": {core._tf_key(tf): core.today_bars(tf) for tf in all_tf},
+        "rows_by_tf": {core._tf_key(tf): core.today_rows(tf) for tf in all_tf},
+        "indicators": {core._tf_key(tf): core.indicators(tf) for tf in all_tf},
+        "structure": structure_payload(),
+        "static": {k: snap.get(k) for k in ("breadth", "stocks", "sectors", "global")},
+    }
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(HERE), **kw)
@@ -159,18 +185,11 @@ class Handler(SimpleHTTPRequestHandler):
             d = get_snapshot(3)
             self._json({k: d.get(k) for k in ("breadth", "stocks", "sectors", "global")})
             return
+        if u.path == "/api/bootstrap":
+            self._json(bootstrap_payload())
+            return
         if u.path == "/api/structure":
-            samples = STORE.fetch("oi_samples", filters={"day": core.today_str()},
-                                  order="ts.asc")
-            obs = []
-            for i, s in enumerate(samples):
-                prev = samples[i - 1] if i else {}
-                obs.append({"ts": s.get("ts"), "price": s.get("spot"),
-                            "oi": s.get("total_oi"), "price_prev": prev.get("spot"),
-                            "oi_prev": prev.get("total_oi"), "tf": "30s"})
-            self._json({"as_of": core.today_str(),
-                        "single": structure.analyze(obs, tf="30s"),
-                        "timeframes": structure.multi_timeframe(obs)})
+            self._json(structure_payload())
             return
         if u.path == "/api/bars":
             q = parse_qs(u.query)

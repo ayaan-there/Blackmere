@@ -69,6 +69,22 @@ def _rows_loop():
             try:
                 samples = core.oi_samples()
                 fut = data_loader.fetch_futures_ltp()
+                # Canonical source: real 1-second ticks. Aggregate them into
+                # every timeframe so no chart depends on the REST candle call.
+                ones = STORE.fetch("price_bars",
+                                   filters={"day": core.today_str(), "tf": "1s"},
+                                   order="ts.asc")
+                if ones:
+                    src = [{"t": str(b.get("ts", ""))[11:19], "o": b.get("o"),
+                            "h": b.get("h"), "l": b.get("l"), "c": b.get("c")} for b in ones]
+                    for tf in (0,) + core.TFS:
+                        key = "1m" if tf == 0 else str(tf)
+                        groups = _bucket(src, tf)
+                        STORE.upsert("price_bars", [{
+                            "day": core.today_str(), "tf": key, "ts": _iso(g[-1]["t"]),
+                            "o": float(g[0]["o"]), "h": max(float(x["h"]) for x in g),
+                            "l": min(float(x["l"]) for x in g),
+                            "c": float(g[-1]["c"])} for g in groups])
                 for tf in (0, 1) + core.TFS:
                     tf_key = "1s" if tf == 1 else ("1m" if tf == 0 else str(tf))
                     if tf == 1:
@@ -109,11 +125,11 @@ def _rows_loop():
                         if rows:
                             STORE.upsert("session_rows", rows)
                         continue
-                    bars = core.today_bars(3)
+                    bars = core.today_bars(tf)
                     if not bars:
                         continue
                     rows = []
-                    groups = _bucket(bars, tf)
+                    groups = [[b] for b in bars]
                     for grp in groups:
                         label = grp[-1]["t"]
                         stamp = _iso(label)
