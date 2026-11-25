@@ -79,7 +79,7 @@ def _rows_loop():
                             "h": b.get("h"), "l": b.get("l"), "c": b.get("c")} for b in ones]
                     for tf in (0,) + core.TFS:
                         key = "1m" if tf == 0 else str(tf)
-                        groups = _bucket(src, tf)
+                        groups = _bucket(src, 1 if tf == 0 else tf)
                         STORE.upsert("price_bars", [{
                             "day": core.today_str(), "tf": key, "ts": _iso(g[-1]["t"]),
                             "o": float(g[0]["o"]), "h": max(float(x["h"]) for x in g),
