@@ -18,7 +18,7 @@ import config
 import data_loader
 import nse_live
 
-from store import STORE
+from store import STORE, fetch_all
 
 IST = timezone(timedelta(hours=5, minutes=30))
 TFS = (3, 5, 9, 15)
@@ -155,14 +155,14 @@ def _tf_key(tf: int) -> str:
 
 
 def _bars_for(tf: int) -> list:
-    return STORE.fetch("price_bars", filters={"day": today_str(), "tf": _tf_key(tf)},
-                       order="ts.asc", limit=100000)
+    return fetch_all("price_bars", filters={"day": today_str(), "tf": _tf_key(tf)},
+                     order="ts.asc")
 
 
 def previous_session() -> dict | None:
     """Last trading day before today, from REAL stored 1m bars. Never hardcoded."""
-    rows = STORE.fetch("price_bars", filters={"tf": "1m"},
-                       columns="day,ts,o,h,l,c", limit=20000)
+    rows = fetch_all("price_bars", filters={"tf": "1m"},
+                     columns="day,ts,o,h,l,c")
     today = today_str()
     days = sorted({str(r.get("day", ""))[:10] for r in rows
                    if str(r.get("day", ""))[:10] and str(r.get("day", ""))[:10] < today})
@@ -197,8 +197,8 @@ def pivot_levels() -> dict | None:
 def indicators(tf: int) -> dict:
     """VWAP from today's real 1m bars; pivot from the last prior trading day."""
     bars = _bars_for(tf)
-    m1 = STORE.fetch("price_bars", filters={"day": today_str(), "tf": "1m"},
-                     order="ts.asc", limit=100000)
+    m1 = fetch_all("price_bars", filters={"day": today_str(), "tf": "1m"},
+                   order="ts.asc")
     m1 = sorted(m1, key=lambda b: str(b.get("ts", "")))
     points, cum, count, ptr = [], 0.0, 0, 0
     for b in bars:

@@ -55,7 +55,7 @@ class Store:
 
     def fetch(self, table: str, filters: dict | None = None,
               columns: str = "*", order: str | None = None,
-              limit: int | None = None) -> list:
+              limit: int | None = None, offset: int = 0) -> list:
         if table not in TABLES:
             return []
         if not self.enabled:
@@ -71,7 +71,9 @@ class Store:
         if order:
             params["order"] = order
         if limit:
-            params["limit"] = str(limit)
+            params["limit"] = str(min(int(limit), 1000))
+        if offset:
+            params["offset"] = str(int(offset))
         try:
             r = requests.get(f"{self.url}/rest/v1/{table}", headers=self._headers(),
                              params=params, timeout=(6, 20))
@@ -138,3 +140,17 @@ class Store:
 
 
 STORE = Store()
+
+
+def fetch_all(table: str, filters: dict | None = None, order: str | None = None,
+              columns: str = "*", max_pages: int = 60) -> list:
+    """Page through Supabase's 1000-row REST cap (no local fallback change)."""
+    out, offset = [], 0
+    for _ in range(max_pages):
+        rows = STORE.fetch(table, filters=filters, columns=columns,
+                           order=order, limit=1000, offset=offset)
+        out.extend(rows)
+        if len(rows) < 1000:
+            break
+        offset += 1000
+    return out

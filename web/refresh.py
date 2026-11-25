@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import core
 import data_loader
 
-from store import STORE
+from store import STORE, fetch_all
 
 IST = timezone(timedelta(hours=5, minutes=30))
 _last_oi = 0.0
@@ -71,9 +71,9 @@ def _rows_loop():
                 fut = data_loader.fetch_futures_ltp()
                 # Canonical source: real 1-second ticks. Aggregate them into
                 # every timeframe so no chart depends on the REST candle call.
-                ones = STORE.fetch("price_bars",
-                                   filters={"day": core.today_str(), "tf": "1s"},
-                                   order="ts.asc", limit=100000)
+                ones = fetch_all("price_bars",
+                                 filters={"day": core.today_str(), "tf": "1s"},
+                                 order="ts.asc")
                 if ones:
                     src = [{"t": str(b.get("ts", ""))[11:19], "o": b.get("o"),
                             "h": b.get("h"), "l": b.get("l"), "c": b.get("c")} for b in ones]
